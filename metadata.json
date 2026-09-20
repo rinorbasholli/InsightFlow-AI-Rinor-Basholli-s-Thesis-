@@ -1,0 +1,6 @@
+{
+  "name": "AI Cybersecurity Risk Lab",
+  "description": "Interactive study studio for evaluating real-time data ingestion pipelines, deepfakes, AI-generated phishing emails, adversarial attacks, and establishing defensive mitigations, inspired by advance academic research.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
