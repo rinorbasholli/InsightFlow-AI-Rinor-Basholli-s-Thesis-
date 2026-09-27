@@ -75,6 +75,7 @@ export default function AdversarialAttackSimulator() {
   const [noiseLevel, setNoiseLevel] = useState<number>(0.05);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any | null>(null);
+  const [resultSource, setResultSource] = useState<'gemini' | 'fallback' | null>(null);
   const [errorStatus, setErrorStatus] = useState<string | null>(null);
   
   // Common quick pairs
@@ -105,6 +106,7 @@ export default function AdversarialAttackSimulator() {
       const data = await resp.json();
       if (data.success) {
         setResult(data.perturbation);
+        setResultSource(data.source === 'fallback' ? 'fallback' : 'gemini');
       } else {
         setErrorStatus(data.error || 'Failed to simulate');
       }
@@ -132,7 +134,7 @@ export default function AdversarialAttackSimulator() {
             </div>
             <div>
               <h2 className="text-xl font-bold font-display text-white">AI Model Attack Simulator</h2>
-              <p className="text-xs text-slate-400">Test how easily image-recognition AI models can be tricked by adding tiny amounts of noise (FGSM &amp; PGD methods).</p>
+              <p className="text-xs text-slate-400">Educational FGSM visualisation. No classifier is loaded and no real gradient is computed.</p>
             </div>
           </div>
           <span className="text-[10px] font-mono leading-none bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 font-bold px-2.5 py-1.5 rounded uppercase">
@@ -356,7 +358,9 @@ export default function AdversarialAttackSimulator() {
               <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-850 space-y-3 flex flex-col justify-between">
                 <div className="flex justify-between items-center text-[10px] uppercase font-mono tracking-wider text-rose-400 font-bold border-b border-slate-900 pb-1.5">
                   <span>3. Tricked Image (x*)</span>
-                  {result ? <span className="text-rose-500 leading-none font-bold animate-pulse">ATTACK SUCCESS</span> : <span className="text-slate-500 leading-none font-bold">WAITING</span>}
+                  <span className="text-rose-500 leading-none font-bold">
+                    {result ? 'SIMULATED OUTCOME' : 'WAITING'}
+                  </span>
                 </div>
 
                 <div className="relative aspect-square w-full rounded-lg overflow-hidden border border-rose-500/20 bg-slate-900">
@@ -372,9 +376,11 @@ export default function AdversarialAttackSimulator() {
                     <NoiseCanvas noiseLevel={1.0} />
                   </div>
                   
-                  <div className="absolute top-2 right-2 bg-red-650/95 border border-red-500/30 text-white font-mono text-[9px] uppercase px-1.5 py-0.5 rounded font-bold shadow-md animate-pulse">
-                    Fake Image
+{result && (
+                  <div className="absolute top-2 right-2 bg-red-650/95 border border-red-500/30 text-white font-mono text-[9px] uppercase px-1.5 py-0.5 rounded font-bold shadow-md">
+                    Simulated
                   </div>
+                  )}
                   
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/90 to-transparent p-2 text-center">
                     <span className="text-[9px] font-mono font-bold text-rose-400">Tricked Result</span>
@@ -391,7 +397,7 @@ export default function AdversarialAttackSimulator() {
                     {result ? result.targetClass : targetClass}
                   </p>
                   <p className="text-xs font-mono font-bold text-white">
-                    {result ? `Conf: ${result.targetConfidence}%` : 'Waiting for calculation...'}
+                    {result ? `Conf: ${result.targetConfidence}%` : '—'}
                   </p>
                 </div>
               </div>
@@ -406,7 +412,7 @@ export default function AdversarialAttackSimulator() {
                   How the AI Model was Tricked:
                 </span>
                 <p className="text-slate-300 leading-snug">
-                  By adding tiny, invisible mathematical changes to the image pixels, the AI is completely tricked from the real label <strong className="text-indigo-400">&ldquo;{originalClass}&rdquo;</strong> into thinking the image is a <strong className="text-rose-400">&ldquo;{result ? result.targetClass : targetClass}&rdquo;</strong>.
+                  By adding a canvas noise overlay, this lab <em>illustrates</em> how a classifier could be tricked from <strong className="text-indigo-400">&ldquo;{originalClass}&rdquo;</strong> toward <strong className="text-rose-400">&ldquo;{result ? result.targetClass : targetClass}&rdquo;</strong>. The numbers below are Gemini estimates or fallback constants, not measured ASR.
                 </p>
               </div>
             </div>
@@ -440,9 +446,14 @@ export default function AdversarialAttackSimulator() {
                 <span className="text-xs font-bold font-display text-white">
                   Model Defense Analysis
                 </span>
-                <span className="text-[10px] font-mono bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded font-bold uppercase">
-                  Displayed ASR (UI threshold, not measured): {result.targetConfidence > 80 ? '98.5%' : '84.2%'}
-                </span>
+<div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-slate-400">
+                    {resultSource === 'fallback' ? 'Source: offline fallback' : 'Source: Gemini narration'}
+                  </span>
+                  <span className="text-[10px] font-mono bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded font-bold uppercase">
+                    Displayed ASR (UI threshold, not measured): {result.targetConfidence > 80 ? '98.5%' : '84.2%'}
+                  </span>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -468,7 +479,7 @@ export default function AdversarialAttackSimulator() {
                     <span className="text-lg font-bold font-mono text-white">
                       {result.targetConfidence}%
                     </span>
-                    <span className="text-[10px] text-rose-450 font-bold font-sans">Tricked successfully!</span>
+                    <span className="text-[10px] text-rose-450 font-bold font-sans">Simulated target confidence</span>
                   </div>
                 </div>
               </div>
