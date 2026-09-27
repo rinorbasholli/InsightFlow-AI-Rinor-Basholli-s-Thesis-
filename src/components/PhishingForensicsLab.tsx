@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
-import { Mail, Check, AlertTriangle, ShieldCheck, Cpu, RefreshCw, Layers, ListFilter } from 'lucide-react';
+import { Mail, ShieldCheck, Cpu, Layers, ListFilter, Upload } from 'lucide-react';
 import { ACADEMIC_DATASET, PUBLIC_PATTERN_SAMPLES, parseEmailFile } from '../academicDataset';
 
 interface PhishingTesterProps {
   onAnalyzeComplete: (
     analysis: any, 
-    emailData?: { subject: string; body: string; sender?: string; category?: string }
+    emailData?: {
+      subject: string;
+      body: string;
+      sender?: string;
+      recipient?: string;
+      category?: string;
+      labelOrigin?: 'known-sample' | 'llm' | 'fallback';
+      analysisSource?: 'gemini' | 'fallback';
+    }
   ) => void;
 }
 
@@ -23,7 +31,11 @@ export default function PhishingForensicsLab({ onAnalyzeComplete }: PhishingTest
   // Manual Classifier states
   const [subjectInput, setSubjectInput] = useState('');
   const [bodyInput, setBodyInput] = useState('');
+  const [senderInput, setSenderInput] = useState('');
+  const [knownCategory, setKnownCategory] = useState<'legitimate' | 'conventional_phishing' | 'ai_phishing' | null>(null);
   const [classifyLoading, setClassifyLoading] = useState(false);
+  const [fileStatus, setFileStatus] = useState<string | null>(null);
+  const [analysisSource, setAnalysisSource] = useState<'gemini' | 'fallback' | null>(null);
 
   const [copiedText, setCopiedText] = useState(false);
 
@@ -42,10 +54,11 @@ export default function PhishingForensicsLab({ onAnalyzeComplete }: PhishingTest
       });
       const data = await resp.json();
       if (data.success) {
-        setGeneratedResult(data.email);
-        // Automatically set classifier content to let the user analyze it easily
+        setGeneratedResult({ ...data.email, source: data.source || 'gemini' });
         setSubjectInput(data.email.subject);
         setBodyInput(data.email.body);
+        setSenderInput(data.email.sender || 'ai-generator@insightflow.local');
+        setKnownCategory('ai_phishing');
       }
     } catch (err) {
       console.error('Failed generation:', err);
@@ -56,22 +69,26 @@ export default function PhishingForensicsLab({ onAnalyzeComplete }: PhishingTest
 
   const handleAnalyzeEmail = async (subject: string, body: string) => {
     setClassifyLoading(true);
+    setAnalysisSource(null);
     try {
       const resp = await fetch('/api/analyze-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, body, sender: 'forensic-analyst@estig.ipb.pt' })
+        body: JSON.stringify({ subject, body, sender: senderInput })
       });
       const data = await resp.json();
       if (data.success) {
-        // Enforce robust historical inclusion
+        const source = data.source === 'fallback' ? 'fallback' : 'gemini';
+        setAnalysisSource(source);
         const llmCategory = data.analysis?.predictedCategory as string | undefined;
-        const category = llmCategory || 'conventional_phishing';
+        const category = knownCategory || llmCategory || 'conventional_phishing';
         onAnalyzeComplete(data.analysis, {
           subject,
           body,
-          sender: 'forensic-analyst@estig.ipb.pt',
-          category
+          sender: senderInput || 'forensic-analyst@estig.ipb.pt',
+          category,
+          labelOrigin: knownCategory ? 'known-sample' : (source === 'fallback' ? 'fallback' : 'llm'),
+          analysisSource: source
         });
       }
     } catch (err) {
@@ -81,10 +98,42 @@ export default function PhishingForensicsLab({ onAnalyzeComplete }: PhishingTest
     }
   };
 
-  const loadPresetIntoClassifier = (subject: string, body: string) => {
+  const loadPresetIntoClassifier = (
+    subject: string,
+    body: string,
+    sender?: string,
+    category?: 'legitimate' | 'conventional_phishing' | 'ai_phishing'
+  ) => {
     setSubjectInput(subject);
     setBodyInput(body);
+    setSenderInput(sender || '');
+    setKnownCategory(category || null);
+    setFileStatus(null);
     setActiveTab('classifier');
+  };
+
+  const handleEmailFile = async (file: File | null) => {
+    if (!file) return;
+    const lower = file.name.toLowerCase();
+    if (!lower.endsWith('.txt') && !lower.endsWith('.eml')) {
+      setFileStatus('Please choose a .txt or .eml file.');
+      return;
+    }
+    try {
+      const text = await file.text();
+      const parsed = parseEmailFile(text);
+      if (!parsed.body && !parsed.subject) {
+        setFileStatus('Could not read subject or body from that file.');
+        return;
+      }
+      setSubjectInput(parsed.subject);
+      setBodyInput(parsed.body);
+      if (parsed.sender) setSenderInput(parsed.sender);
+      setKnownCategory(null);
+      setFileStatus(`Loaded ${file.name}. This is your file text; Gemini will judge the wording, not a live mailbox.`);
+    } catch {
+      setFileStatus('Could not read that file.');
+    }
   };
 
   return (
@@ -113,7 +162,7 @@ export default function PhishingForensicsLab({ onAnalyzeComplete }: PhishingTest
             }`}
           >
             <ListFilter className="w-4 h-4" />
-            Sample Emails (3 Cases)
+            Sample Emails
           </button>
           <button
             onClick={() => setActiveTab('generator')}
@@ -144,10 +193,12 @@ export default function PhishingForensicsLab({ onAnalyzeComplete }: PhishingTest
         {activeTab === 'dataset' && (
           <div className="space-y-6">
             <div className="p-4 bg-indigo-950/20 border border-indigo-500/20 text-indigo-300 rounded-lg text-xs leading-relaxed">
-              <strong>Project Recommendation:</strong> Our thesis compares normal emails, simple scam emails, and highly realistic AI-written emails. Look at the 3 sample templates below. Click &ldquo;Send to Inspector&rdquo; to check their security details.
+              <strong>How to read these samples:</strong> the first three are the thesis exemplars (hand-written). The next four are original educational reconstructions of publicly documented scam/notice patterns — not harvested from a live mailbox. Click &ldquo;Send to Inspector&rdquo; to run the existing Gemini text check (or the offline fallback). That check judges wording; it is not a spam-filter benchmark.
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            <div>
+              <h3 className="text-[10px] uppercase font-mono font-bold tracking-wider text-slate-500 mb-3">Thesis exemplars</h3>
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
               {ACADEMIC_DATASET.map((example) => (
                 <div
                   key={example.id}
@@ -191,13 +242,70 @@ export default function PhishingForensicsLab({ onAnalyzeComplete }: PhishingTest
                   </div>
 
                   <button
-                    onClick={() => loadPresetIntoClassifier(example.subject, example.body)}
+                    onClick={() => loadPresetIntoClassifier(example.subject, example.body, example.sender, example.category)}
                     className="mt-4 w-full py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-300 border border-indigo-500/20 rounded-lg text-xs font-semibold transition duration-150 cursor-pointer"
                   >
                     Send to Inspector &rarr;
                   </button>
                 </div>
               ))}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-[10px] uppercase font-mono font-bold tracking-wider text-slate-500 mb-3">Public-pattern reconstructions (teaching texts)</h3>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              {PUBLIC_PATTERN_SAMPLES.map((example) => (
+                <div
+                  key={example.id}
+                  className="p-5 rounded-xl border border-slate-800 bg-slate-950/40 flex flex-col justify-between hover:border-slate-705 transition duration-150"
+                >
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className={`text-[10px] font-mono uppercase font-bold px-2 py-0.5 rounded leading-none ${
+                        example.category === 'legitimate'
+                          ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                          : example.category === 'conventional_phishing'
+                          ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+                          : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                      }`}>
+                        {example.category.replace('_', ' ')}
+                      </span>
+                      <span className="text-[10px] text-gray-500 font-medium font-mono">{example.tag}</span>
+                    </div>
+
+                    <div className="space-y-1.5 p-3 rounded bg-slate-950/80 border border-slate-800 text-[11px]">
+                      <div>
+                        <span className="text-gray-500 font-mono">From: </span>
+                        <span className="text-gray-300 font-mono">{example.sender}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 font-mono">Subject: </span>
+                        <span className="text-white font-medium">{example.subject}</span>
+                      </div>
+                    </div>
+
+                    <pre className="p-3 rounded bg-slate-950 text-[10px] text-slate-400 font-mono whitespace-pre-wrap max-h-36 overflow-y-auto leading-relaxed border border-slate-800/60">
+                      {example.body}
+                    </pre>
+
+                    <div className="p-2.5 bg-slate-900 rounded border border-slate-800 text-[10px] leading-snug">
+                      <span className="text-gray-400 font-semibold block uppercase text-[8px] tracking-wide mb-1">
+                        Provenance
+                      </span>
+                      <p className="text-gray-300">{example.provenance}</p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => loadPresetIntoClassifier(example.subject, example.body, example.sender, example.category)}
+                    className="mt-4 w-full py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-300 border border-indigo-500/20 rounded-lg text-xs font-semibold transition duration-150 cursor-pointer"
+                  >
+                    Send to Inspector &rarr;
+                  </button>
+                </div>
+              ))}
+              </div>
             </div>
           </div>
         )}
@@ -352,6 +460,8 @@ export default function PhishingForensicsLab({ onAnalyzeComplete }: PhishingTest
                       onClick={() => {
                         setSubjectInput(generatedResult.subject);
                         setBodyInput(generatedResult.body);
+                        setSenderInput(generatedResult.sender || 'ai-generator@insightflow.local');
+                        setKnownCategory('ai_phishing');
                         setActiveTab('classifier');
                       }}
                       className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white rounded-lg transition cursor-pointer"
@@ -371,9 +481,47 @@ export default function PhishingForensicsLab({ onAnalyzeComplete }: PhishingTest
             <span className="text-xs uppercase font-bold tracking-wider text-gray-400 font-mono block">
               Email Analysis &amp; Security Check
             </span>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Paste subject/body, or load a <span className="font-mono">.txt</span> / <span className="font-mono">.eml</span> file. The backend still uses Gemini (or a keyword fallback). It does not query Gmail or SpamAssassin. Include the From address so domain lookalikes can be discussed.
+            </p>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">
+                    Load .txt or .eml (optional)
+                  </label>
+                  <label className="flex items-center gap-2 w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-300 cursor-pointer hover:border-indigo-500/40">
+                    <Upload className="w-4 h-4 text-indigo-400" />
+                    <span>Choose a local email file</span>
+                    <input
+                      type="file"
+                      accept=".txt,.eml,text/plain,message/rfc822"
+                      className="hidden"
+                      onChange={(e) => handleEmailFile(e.target.files?.[0] || null)}
+                    />
+                  </label>
+                  {fileStatus && (
+                    <p className="mt-1.5 text-[10px] text-indigo-300 leading-relaxed">{fileStatus}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">
+                    From / Sender
+                  </label>
+                  <input
+                    type="text"
+                    value={senderInput}
+                    onChange={(e) => {
+                      setSenderInput(e.target.value);
+                      setKnownCategory(null);
+                    }}
+                    placeholder="e.g. academic-office@ipb.pt"
+                    className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-indigo-500/50 font-mono"
+                  />
+                </div>
+
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">
                     Email Subject Line
@@ -381,7 +529,10 @@ export default function PhishingForensicsLab({ onAnalyzeComplete }: PhishingTest
                   <input
                     type="text"
                     value={subjectInput}
-                    onChange={(e) => setSubjectInput(e.target.value)}
+                    onChange={(e) => {
+                      setSubjectInput(e.target.value);
+                      setKnownCategory(null);
+                    }}
                     placeholder="Copy/paste a suspicious subject line..."
                     className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-indigo-500/50 font-mono focus:ring-1 focus:ring-indigo-550/30"
                   />
@@ -394,7 +545,10 @@ export default function PhishingForensicsLab({ onAnalyzeComplete }: PhishingTest
                   <textarea
                     rows={10}
                     value={bodyInput}
-                    onChange={(e) => setBodyInput(e.target.value)}
+                    onChange={(e) => {
+                      setBodyInput(e.target.value);
+                      setKnownCategory(null);
+                    }}
                     placeholder="Paste the email body text here to check if it looks suspicious or realistic..."
                     className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-indigo-500/50 font-mono resize-none leading-relaxed focus:ring-1 focus:ring-indigo-550/30"
                   />
@@ -417,7 +571,7 @@ export default function PhishingForensicsLab({ onAnalyzeComplete }: PhishingTest
                 <ShieldCheck className="w-10 h-10 text-indigo-500/20 mb-3 animate-pulse" />
                 <p className="text-sm font-semibold font-display text-slate-400 text-center">Security Analysis Result</p>
                 <p className="text-xs text-slate-500 max-w-xs mt-2 leading-relaxed font-sans">
-                  The system checks for urgent language, spelling, grammar quality, and potential scam tactics. It then creates custom defense rules. The result will show up on your &ldquo;Cybersecurity Research Dashboard&rdquo;.
+                  Gemini (or the offline fallback) judges the pasted text. The predicted class is an LLM/heuristic label unless you sent a known sample. The result is stored on the dashboard. Analysis source will be shown there.
                 </p>
               </div>
             </div>
