@@ -78,7 +78,6 @@ Deepfake filename presets:
 | POST | `/api/analyze-email` | Score and explain an email |
 | POST | `/api/analyze-media-deepfake` | Deepfake narrative / preset lookup |
 | POST | `/api/adversarial-perturb` | Simulated perturbation result |
-| GET | `/api/export-report-docx` | Companion Word narrative |
 
 ## Honesty for evaluators
 
