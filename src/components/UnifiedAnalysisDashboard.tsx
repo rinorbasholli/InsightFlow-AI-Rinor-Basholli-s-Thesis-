@@ -377,6 +377,20 @@ export default function UnifiedAnalysisDashboard({
                   <span className="text-[10px] font-mono text-slate-500 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
                     {activeSpecimen.tag}
                   </span>
+                  {activeSpecimen.analysisSource && (
+                    <span className="text-[10px] font-mono text-indigo-300 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-500/20">
+                      {activeSpecimen.analysisSource === 'dataset'
+                        ? 'Assigned by dataset'
+                        : activeSpecimen.analysisSource === 'fallback'
+                          ? 'Offline fallback'
+                          : 'Gemini text judgement'}
+                    </span>
+                  )}
+                  {activeSpecimen.labelOrigin && activeSpecimen.labelOrigin !== 'dataset' && (
+                    <span className="text-[10px] font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                      Label: {activeSpecimen.labelOrigin === 'known-sample' ? 'known sample' : activeSpecimen.labelOrigin}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -490,7 +504,7 @@ export default function UnifiedAnalysisDashboard({
       <div className="p-4 rounded-xl border border-indigo-500/20 bg-indigo-950/10 flex items-start gap-3 text-xs leading-relaxed text-indigo-300">
         <HelpCircle className="w-5 h-5 flex-shrink-0 text-indigo-400" />
         <div>
-          <strong>Why this matters for our thesis:</strong> Starting with 90 samples gives us enough data to run realistic stats. We can easily compare simple scam emails with advanced AI-generated emails without hitting API speed limits.
+          <strong>Why this matters for our thesis:</strong> The 90-sample load is a seeded in-memory teaching set (not a public corpus). Live checks judge pasted or generated wording with Gemini or an offline fallback. Deepfake and adversarial labs remain simulators — real detectors are future work.
         </div>
       </div>
 
