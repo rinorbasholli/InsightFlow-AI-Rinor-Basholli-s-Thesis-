@@ -205,31 +205,58 @@ IPB SEC LAB ESTiG`,
   };
 }
 
+function normalizeEmailCategory(value: unknown): 'legitimate' | 'conventional_phishing' | 'ai_phishing' | null {
+  const s = String(value || '').toLowerCase().replace(/[\s-]+/g, '_');
+  if (s.includes('legit')) return 'legitimate';
+  if (s.includes('conventional') || s === 'phishing' || s.includes('bec')) return 'conventional_phishing';
+  if (s.includes('ai_phish') || s.includes('spear') || s.includes('ai-phish')) return 'ai_phishing';
+  return null;
+}
+
 function getEmailAnalysisFallback(subject: string, body: string, sender?: string) {
   const normSubject = (subject || '').toLowerCase();
   const normBody = (body || '').toLowerCase();
-  
+  const normSender = (sender || '').toLowerCase();
+  const blob = `${normSender} ${normSubject} ${normBody}`;
+  const domain = (normSender.split('@')[1] || '').trim();
+  const officialDomain = domain === 'ipb.pt' || domain.endsWith('.ipb.pt');
+  const lookalike = /ipb-portal|ipb-support|ipb-finance|estig-recovery|secure-estig|micros0ft|ctt-entrega/.test(blob);
+  const obviousPhish = /urgent|password|reset|wire|sepa|credential|suspended|overdue|click here|gift card|delivery fee/.test(blob);
   const isUrgent = normSubject.includes('urgent') || normSubject.includes('immediate') || normBody.includes('6 hours') || normBody.includes('overdue');
-  
-  return {
-    realismScore: normSubject.includes('critical') || normSubject.includes('overdue') ? 88 : 78,
-    detectabilityScore: isUrgent ? 65 : 45,
-    languagePolish: 85,
-    urgencyLevel: isUrgent ? 'high' : 'medium',
-    detectionDifficulty: isUrgent ? 'Moderate' : 'Difficult',
-    indicators: [
-      "Subject line creates artificial urgency by requesting credential validation.",
-      "Generic greeting that is atypical for authentic departmental correspondences.",
-      "Call-to-action redirects to custom external credentials recovery form."
-    ],
-    mitigationRules: [
-      "Configure standard dual-factor hardware token validation to block stolen credentials.",
-      "Deploy semantic email filters looking for behavioral threat vectors instead of static link strings."
-    ],
-    detailedAnalysis: `### Forensic Analysis Report
-This email exhibits several classic phishing indicators. The subject line utilizes **artificial urgency** to bypass slow cognitive verification.
 
-The sender utilizes a semi-official signature. However, the linguistic structures display minor patterns typical of high-quality AI-synthesized content: highly polished, flawless grammatical style coupled with generic references. Defensive filters should flag this file based on domain discrepancies and semantic pressure patterns.`
+  let predictedCategory: 'legitimate' | 'conventional_phishing' | 'ai_phishing';
+  if (officialDomain && !obviousPhish && !lookalike) predictedCategory = 'legitimate';
+  else if (lookalike && !/!!!|password reset|delivery fee/.test(blob)) predictedCategory = 'ai_phishing';
+  else if (obviousPhish || lookalike) predictedCategory = 'conventional_phishing';
+  else predictedCategory = officialDomain ? 'legitimate' : 'conventional_phishing';
+
+  return {
+    realismScore: predictedCategory === 'legitimate' ? 92 : (normSubject.includes('critical') || normSubject.includes('overdue') ? 88 : 78),
+    detectabilityScore: predictedCategory === 'legitimate' ? 22 : (isUrgent ? 65 : 45),
+    languagePolish: predictedCategory === 'conventional_phishing' ? 55 : 85,
+    urgencyLevel: isUrgent ? 'high' : (predictedCategory === 'legitimate' ? 'low' : 'medium'),
+    detectionDifficulty: predictedCategory === 'legitimate' ? 'Moderate' : (isUrgent ? 'Moderate' : 'Difficult'),
+    predictedCategory,
+    categoryRationale: predictedCategory === 'legitimate'
+      ? 'Offline fallback: official-looking institutional domain without payment or credential bait.'
+      : predictedCategory === 'ai_phishing'
+        ? 'Offline fallback: lookalike domain with relatively polished language (not a trained classifier).'
+        : 'Offline fallback: urgency, payment, or credential-harvest cues (keyword heuristic, not a spam filter).',
+    indicators: predictedCategory === 'legitimate'
+      ? [
+          'Sender domain matches an official IPB-style hostname.',
+          'No payment, credential-reset, or short-deadline bait detected by the keyword fallback.'
+        ]
+      : [
+          sender ? `Sender inspected: ${sender}` : 'Sender was empty; domain spoofing could not be checked.',
+          isUrgent ? 'Subject or body uses artificial urgency.' : 'Suspicious call-to-action or lookalike domain cues.',
+          'This fallback does not query a real mail filter.'
+        ],
+    mitigationRules: [
+      'Check SPF/DKIM/DMARC and the visible From domain before acting.',
+      'Do not treat this fallback score as a Gmail or SpamAssassin verdict.'
+    ],
+    detailedAnalysis: `Offline keyword fallback (Gemini unavailable). Predicted class: ${predictedCategory}. Sender="${sender || '(none)'}". This is a heuristic, not a measured detector.`
   };
 }
 
@@ -316,7 +343,10 @@ app.post('/api/analyze-email', async (req, res) => {
   const { subject, body, sender } = req.body;
 
   const analysisPrompt = `
-Analyze the following email as part of a cybersecurity academic study:
+Analyze the following email as part of a cybersecurity academic study.
+This is an LLM judgement of the text, not a spam-filter measurement.
+
+From: ${sender || '(not provided)'}
 Subject: ${subject}
 Body: ${body}
 
@@ -326,9 +356,14 @@ Determine:
 3. Language Polish Score (0-100) - grammar, punctuation, context coherence.
 4. Urgency Level - low, medium, or high.
 5. Detection Difficulty - Very Easy, Easy, Moderate, Difficult, Expert.
-6. Technical/indicators points - what elements (suspicious link format request, domain spoof cues, credential recovery bait, urgent pressure) are detected.
+6. Technical/indicators points - inspect the From address/domain when provided (lookalike hosts, non-institutional domains, missing sender). Also note suspicious links, credential bait, and urgency.
 7. Defensive mitigation rules - actionable guidelines for protecting a network against such emails.
 8. Detailed Analysis - write a precise 1-2 paragraph description in markdown explaining why.
+9. predictedCategory - exactly one of: legitimate, conventional_phishing, ai_phishing.
+   Use legitimate for calm official-looking institutional mail without payment/credential bait.
+   Use conventional_phishing for obvious lures (urgency, grammar issues, parcel fees, password reset, BEC wire).
+   Use ai_phishing for highly polished spear-phish with lookalike domains and contextual academic/business tailoring.
+10. categoryRationale - one sentence on why that class was chosen. Do not claim this is ground truth.
 
 Generate the response in JSON format.
 `;
@@ -350,6 +385,8 @@ Generate the response in JSON format.
             'indicators',
             'mitigationRules',
             'detailedAnalysis',
+            'predictedCategory',
+            'categoryRationale',
           ],
           properties: {
             realismScore: { type: Type.NUMBER },
@@ -366,16 +403,19 @@ Generate the response in JSON format.
               items: { type: Type.STRING },
             },
             detailedAnalysis: { type: Type.STRING },
+            predictedCategory: { type: Type.STRING },
+            categoryRationale: { type: Type.STRING },
           },
         },
       },
     });
 
     const data = JSON.parse(response.text || '{}');
+    const predicted = normalizeEmailCategory(data.predictedCategory);
+    if (predicted) data.predictedCategory = predicted;
     res.json({ success: true, source: 'gemini', analysis: data });
   } catch (error: any) {
     console.error('Error analyzing email:', error);
-    // Graceful fallback
     const fallbackData = getEmailAnalysisFallback(subject, body, sender);
     res.json({ success: true, source: 'fallback', analysis: fallbackData });
   }
