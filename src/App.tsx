@@ -5,9 +5,11 @@ import PhishingForensicsLab from './components/PhishingForensicsLab';
 import DeepfakeMediaStudio from './components/DeepfakeMediaStudio';
 import AdversarialAttackSimulator from './components/AdversarialAttackSimulator';
 import { generate90Samples, AnalyzedSample } from './academicDataset';
+
 export default function App() {
   const [activeScreen, setActiveScreen] = useState<'dashboard' | 'phishing' | 'deepfake' | 'adversarial'>('dashboard');
   const [lastPhishingAnalysis, setLastPhishingAnalysis] = useState<any | null>(null);
+  
   // Initialize with the 3 core seed samples, mapped to analyzed formats
   const [phishingHistory, setPhishingHistory] = useState<AnalyzedSample[]>(() => 
     generate90Samples().slice(0, 3)
@@ -31,8 +33,8 @@ export default function App() {
       recipient: emailData?.recipient || 'student_test@ipb.pt',
       subject: emailData?.subject || 'Dynamic Submission',
       body: emailData?.body || 'Content entered by user.',
-      category: emailData?.category || 'ai_phishing',
-      tag: 'Forensic Lab Entry',
+      category: emailData?.category || analysis.predictedCategory || 'conventional_phishing',
+      tag: emailData?.labelOrigin === 'known-sample' ? 'Known sample (Gemini scores)' : 'Live text check',
       realismScore: analysis.realismScore || 85,
       detectabilityScore: analysis.detectabilityScore || 60,
       languagePolish: analysis.languagePolish || 90,
@@ -40,7 +42,12 @@ export default function App() {
       detectionDifficulty: (analysis.detectionDifficulty || 'Moderate') as any,
       indicators: analysis.indicators || ['Manual forensic flags applied'],
       mitigationRules: analysis.mitigationRules || ['Deploy standard context sanity checks'],
-      detailedAnalysis: analysis.detailedAnalysis || 'Evaluated via dynamic LLM agent interface.'
+      detailedAnalysis: [
+        analysis.detailedAnalysis || 'Evaluated via dynamic LLM agent interface.',
+        analysis.categoryRationale ? `Class rationale: ${analysis.categoryRationale}` : ''
+      ].filter(Boolean).join(' '),
+      analysisSource: emailData?.analysisSource || 'gemini',
+      labelOrigin: emailData?.labelOrigin || 'llm'
     };
 
     setPhishingHistory(prev => [newSample, ...prev]);
