@@ -340,7 +340,7 @@ export function generate90Samples(): AnalyzedSample[] {
     detectionDifficulty: 'Easy',
     indicators: genericIndicators.conventional,
     mitigationRules: genericMitigations.conventional,
-    detailedAnalysis: 'This conventional phishing email represents classic coercive engineering. It utilizes high-threat urgency parameters, extreme temporal pressure (4 hours), and masks a malignant external security resetting address. Detection difficulty remains low due to apparent spelling and formatting indicators.'
+    detailedAnalysis: 'This conventional phishing email represents classic coercive engineering. It utilizes high-threat urgency parameters, extreme temporal pressure (4 hours), and masks a malignant external security resetting address. Detection difficulty remains low due to apparent spelling and formatting indicators.',
         analysisSource: 'dataset',
         labelOrigin: 'dataset'
   });
@@ -360,7 +360,7 @@ export function generate90Samples(): AnalyzedSample[] {
     detectionDifficulty: 'Moderate',
     indicators: genericIndicators.legitimate,
     mitigationRules: genericMitigations.legitimate,
-    detailedAnalysis: 'Legitimate administrative update from the Polytechic of Bragança (IPB). It contains direct pathways to official, secure subdomains within standard networks, uses professional nomenclature, and does not pose immediate coercive blocks.'
+    detailedAnalysis: 'Legitimate administrative update from the Polytechic of Bragança (IPB). It contains direct pathways to official, secure subdomains within standard networks, uses professional nomenclature, and does not pose immediate coercive blocks.',
         analysisSource: 'dataset',
         labelOrigin: 'dataset'
   });
@@ -380,7 +380,7 @@ export function generate90Samples(): AnalyzedSample[] {
     detectionDifficulty: 'Difficult',
     indicators: genericIndicators.ai,
     mitigationRules: genericMitigations.ai,
-    detailedAnalysis: 'A state-of-the-art AI spear-phishing email targeting academics. Synthesized without semantic errors, it matches ongoing institutional syllabus topics perfectly. Only the external host domain domain registration reveals its illicit nature. Conventional filters fails to spot this.'
+    detailedAnalysis: 'A state-of-the-art AI spear-phishing email targeting academics. Synthesized without semantic errors, it matches ongoing institutional syllabus topics perfectly. Only the external host domain domain registration reveals its illicit nature. Conventional filters fails to spot this.',
         analysisSource: 'dataset',
         labelOrigin: 'dataset'
   });
@@ -443,7 +443,7 @@ Serviço Académico Local IPB`,
           'Ensure the sender address matches legitimate staff logs',
           'Observe normal corporate policy regarding grading and SAS scholarship disbursements'
         ],
-        detailedAnalysis: `Legitimate communication containing real academic registration indexes. Formatted under standard ESTiG-compliant nomenclature without any anomalous redirects or malicious pressure triggers.`
+        detailedAnalysis: `Legitimate communication containing real academic registration indexes. Formatted under standard ESTiG-compliant nomenclature without any anomalous redirects or malicious pressure triggers.`,
         analysisSource: 'dataset',
         labelOrigin: 'dataset'
       });
@@ -487,7 +487,7 @@ IPB Support Team, Bragança`,
           'Filter out external emails containing high-severity threat hooks targeting the student portal',
           'Incorporate user reports inside active firewall routers'
         ],
-        detailedAnalysis: `A conventional phishing template. High grammatical inaccuracies, extremely aggressive blackmail tactics, and suspicious outer links flag this sample clearly on automated rule-based filters.`
+        detailedAnalysis: `A conventional phishing template. High grammatical inaccuracies, extremely aggressive blackmail tactics, and suspicious outer links flag this sample clearly on automated rule-based filters.`,
         analysisSource: 'dataset',
         labelOrigin: 'dataset'
       });
@@ -534,7 +534,7 @@ Academic Evaluation & Peer Review Group`,
           'Enforce strict domain authentication records verification',
           'Utilize advanced semantic AI-based content filters targeting anomalous link request patterns'
         ],
-        detailedAnalysis: `A sophisticated generative AI spear-phishing attack. By referencing specific curricula, Dr. names, and local timelines, it bypasses basic lexical spam rules. Only proactive DNS alignment checks can intercept this.`
+        detailedAnalysis: `A sophisticated generative AI spear-phishing attack. By referencing specific curricula, Dr. names, and local timelines, it bypasses basic lexical spam rules. Only proactive DNS alignment checks can intercept this.`,
         analysisSource: 'dataset',
         labelOrigin: 'dataset'
       });
