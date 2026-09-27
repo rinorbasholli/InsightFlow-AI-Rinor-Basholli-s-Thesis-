@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Check, AlertTriangle, ShieldCheck, Cpu, RefreshCw, Layers, ListFilter } from 'lucide-react';
-import { ACADEMIC_DATASET } from '../academicDataset';
+import { ACADEMIC_DATASET, PUBLIC_PATTERN_SAMPLES, parseEmailFile } from '../academicDataset';
 
 interface PhishingTesterProps {
   onAnalyzeComplete: (
@@ -60,19 +60,18 @@ export default function PhishingForensicsLab({ onAnalyzeComplete }: PhishingTest
       const resp = await fetch('/api/analyze-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, body })
+        body: JSON.stringify({ subject, body, sender: 'forensic-analyst@estig.ipb.pt' })
       });
       const data = await resp.json();
       if (data.success) {
         // Enforce robust historical inclusion
-        const detectedCategory = subject.toLowerCase().includes('critical') || subject.toLowerCase().includes('password') || subject.toLowerCase().includes('urgent')
-          ? 'conventional_phishing'
-          : 'ai_phishing';
+        const llmCategory = data.analysis?.predictedCategory as string | undefined;
+        const category = llmCategory || 'conventional_phishing';
         onAnalyzeComplete(data.analysis, {
           subject,
           body,
           sender: 'forensic-analyst@estig.ipb.pt',
-          category: detectedCategory
+          category
         });
       }
     } catch (err) {
