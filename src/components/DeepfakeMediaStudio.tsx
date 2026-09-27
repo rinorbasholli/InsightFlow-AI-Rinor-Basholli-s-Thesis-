@@ -198,7 +198,7 @@ export default function DeepfakeMediaStudio() {
                 </div>
                 <div className="flex gap-2">
                   <span className="text-xs font-mono bg-indigo-650/10 border border-indigo-500/20 text-indigo-400 px-2.5 py-1 rounded font-bold">
-                    Score Confidence: 89.4%
+                    Marker confidence: simulated
                   </span>
                 </div>
               </div>
