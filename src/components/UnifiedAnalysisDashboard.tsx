@@ -15,12 +15,9 @@ import {
   ArrowRight,
   TrendingUp,
   Mail,
-  HelpCircle,
-  FileDown,
-  Loader2
+  HelpCircle
 } from 'lucide-react';
 import { AnalyzedSample } from '../academicDataset';
-import { downloadReportDocx } from '../utils/exportDocx';
 
 interface UnifiedDashboardProps {
   lastPhishingAnalysis: any | null;
@@ -40,7 +37,6 @@ export default function UnifiedAnalysisDashboard({
   const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'legitimate' | 'conventional_phishing' | 'ai_phishing'>('all');
-  const [isExporting, setIsExporting] = useState(false);
 
   // Math aggregates based on active workspace state
   const metrics = useMemo(() => {
@@ -134,24 +130,6 @@ export default function UnifiedAnalysisDashboard({
           </div>
           
           <div className="flex flex-wrap gap-2.5">
-            <button
-              onClick={() => downloadReportDocx((loading) => setIsExporting(loading))}
-              disabled={isExporting}
-              className="py-2.5 px-3.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-xs font-semibold text-white rounded-lg transition duration-150 shadow-md flex items-center gap-2 cursor-pointer border border-emerald-400/30"
-              title="Download complete academic research report as a Microsoft Word document (.docx)"
-            >
-              {isExporting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Preparing Docx...</span>
-                </>
-              ) : (
-                <>
-                  <FileDown className="w-4 h-4" />
-                  <span>Export Word Doc (.docx)</span>
-                </>
-              )}
-            </button>
             <button
               onClick={onLoad90Samples}
               className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-lg transition duration-150 shadow-md flex items-center gap-2 cursor-pointer"
