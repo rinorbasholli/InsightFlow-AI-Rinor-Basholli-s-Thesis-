@@ -7,6 +7,7 @@ export default function DeepfakeMediaStudio() {
   const [promptAnalysis, setPromptAnalysis] = useState('');
   const [loading, setLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any | null>(null);
+  const [analysisSource, setAnalysisSource] = useState<'preset' | 'gemini' | 'fallback' | null>(null);
   const [errorStatus, setErrorStatus] = useState<string | null>(null);
 
   const presets = [
@@ -47,6 +48,7 @@ export default function DeepfakeMediaStudio() {
       const data = await resp.json();
       if (data.success) {
         setAnalysisResult(data.deepfakeAnalysis);
+        setAnalysisSource(data.source === 'preset' || data.source === 'fallback' ? data.source : 'gemini');
       } else {
         setErrorStatus(data.error || 'Deepfake analysis verification failed');
       }
@@ -72,7 +74,7 @@ export default function DeepfakeMediaStudio() {
           </div>
           <div>
             <h2 className="text-xl font-bold font-display text-white">Deepfake Media &amp; Audio Inspector</h2>
-            <p className="text-xs text-slate-400">Analyze media files to find fake video traits, strange photo lighting, or robotic voices.</p>
+            <p className="text-xs text-slate-400">Filename presets return hardcoded JSON. Other names are narrated from text. Media bytes are not inspected.</p>
           </div>
         </div>
       </div>
@@ -196,10 +198,24 @@ export default function DeepfakeMediaStudio() {
                     {analysisResult.simulatedClassification || 'NEEDS EVALUATION'}
                   </span>
                 </div>
-                <div className="flex gap-2">
-                  <span className="text-xs font-mono bg-indigo-650/10 border border-indigo-500/20 text-indigo-400 px-2.5 py-1 rounded font-bold">
-                    Marker confidence: simulated
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-[10px] font-mono bg-indigo-650/10 border border-indigo-500/20 text-indigo-400 px-2.5 py-1 rounded font-bold">
+                    {analysisSource === 'preset'
+                      ? 'Source: hardcoded preset'
+                      : analysisSource === 'fallback'
+                        ? 'Source: offline fallback'
+                        : 'Source: Gemini narrative'}
                   </span>
+                  {(() => {
+                    const confs = (analysisResult.markers || []).map((m: any) => Number(m.confidence)).filter((n: number) => Number.isFinite(n));
+                    if (!confs.length) return null;
+                    const mean = Math.round(confs.reduce((a: number, b: number) => a + b, 0) / confs.length);
+                    return (
+                      <span className="text-[9px] font-mono text-slate-500">
+                        Mean marker confidence {mean}% (simulated, not a model probability)
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
 
