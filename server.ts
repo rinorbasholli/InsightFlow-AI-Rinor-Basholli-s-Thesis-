@@ -205,7 +205,7 @@ IPB SEC LAB ESTiG`,
   };
 }
 
-function getEmailAnalysisFallback(subject: string, body: string) {
+function getEmailAnalysisFallback(subject: string, body: string, sender?: string) {
   const normSubject = (subject || '').toLowerCase();
   const normBody = (body || '').toLowerCase();
   
@@ -302,18 +302,18 @@ Please output a JSON response containing:
     });
 
     const data = JSON.parse(response.text || '{}');
-    res.json({ success: true, email: data });
+    res.json({ success: true, source: 'gemini', email: data });
   } catch (error: any) {
     console.error('Error generating AI phishing:', error);
     // Graceful fallback
     const fallbackData = getPhishingFallback(scenario, promptText, complexity);
-    res.json({ success: true, email: fallbackData });
+    res.json({ success: true, source: 'fallback', email: fallbackData });
   }
 });
 
 // 2. Classify / Analyze any email based on student laboratory requirements
 app.post('/api/analyze-email', async (req, res) => {
-  const { subject, body } = req.body;
+  const { subject, body, sender } = req.body;
 
   const analysisPrompt = `
 Analyze the following email as part of a cybersecurity academic study:
@@ -372,12 +372,12 @@ Generate the response in JSON format.
     });
 
     const data = JSON.parse(response.text || '{}');
-    res.json({ success: true, analysis: data });
+    res.json({ success: true, source: 'gemini', analysis: data });
   } catch (error: any) {
     console.error('Error analyzing email:', error);
     // Graceful fallback
-    const fallbackData = getEmailAnalysisFallback(subject, body);
-    res.json({ success: true, analysis: fallbackData });
+    const fallbackData = getEmailAnalysisFallback(subject, body, sender);
+    res.json({ success: true, source: 'fallback', analysis: fallbackData });
   }
 });
 
@@ -388,8 +388,8 @@ app.post('/api/analyze-media-deepfake', async (req, res) => {
   // Direct fast matching for exact presets (guarantees instantaneous and offline-safe presentation)
   const cleanName = (fileName || '').trim().toLowerCase();
   for (const presetName of Object.keys(PRE_BAKED_DEEPFAKES)) {
-    if (cleanName === presetName.toLowerCase() || (cleanName && presetName.toLowerCase().includes(cleanName))) {
-      return res.json({ success: true, deepfakeAnalysis: PRE_BAKED_DEEPFAKES[presetName] });
+    if (cleanName === presetName.toLowerCase()) {
+      return res.json({ success: true, source: 'preset', deepfakeAnalysis: PRE_BAKED_DEEPFAKES[presetName] });
     }
   }
 
@@ -459,12 +459,12 @@ Provide a structured metadata assessment of deepfake signs:
     });
 
     const data = JSON.parse(response.text || '{}');
-    res.json({ success: true, deepfakeAnalysis: data });
+    res.json({ success: true, source: 'gemini', deepfakeAnalysis: data });
   } catch (error: any) {
     console.error('Error analyzing media deepfake:', error);
     // Graceful fallback to guarantee smooth presentation even if API is 503 / UNAVAILABLE
     const fallbackData = getDynamicFallbackDeepfake(fileName, mediaType, promptAnalysis);
-    res.json({ success: true, deepfakeAnalysis: fallbackData });
+    res.json({ success: true, source: 'fallback', deepfakeAnalysis: fallbackData });
   }
 });
 
@@ -523,12 +523,12 @@ Output JSON structured simulation parameters:
     });
 
     const data = JSON.parse(response.text || '{}');
-    res.json({ success: true, perturbation: data });
+    res.json({ success: true, source: 'gemini', perturbation: data });
   } catch (error: any) {
     console.error('Error calculating adversarial stats:', error);
     // Graceful fallback
     const fallbackData = getAdversarialFallback(originalClass, targetClass, noiseLevel, architecture);
-    res.json({ success: true, perturbation: fallbackData });
+    res.json({ success: true, source: 'fallback', perturbation: fallbackData });
   }
 });
 
