@@ -67,7 +67,7 @@ export default function UnifiedAnalysisDashboard({
     const aiDetectabilitySum = ai.reduce((acc, s) => acc + s.detectabilityScore, 0);
     const aiBypass = ai.length > 0 
       ? Math.round(100 - (aiDetectabilitySum / ai.length))
-      : 82; // standard benchmark fallbacks
+      : 0;
 
     return {
       total,
