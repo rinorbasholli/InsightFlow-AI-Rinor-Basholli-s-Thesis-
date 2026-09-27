@@ -1,17 +1,13 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Mail, Video, Flame, LayoutDashboard, Brain, BookOpen, AlertCircle, Database, ShieldAlert, Cpu, FileDown, Loader2 } from 'lucide-react';
+import { ShieldCheck, Mail, Video, Flame, LayoutDashboard, Brain, BookOpen, AlertCircle, Database, ShieldAlert, Cpu } from 'lucide-react';
 import UnifiedAnalysisDashboard from './components/UnifiedAnalysisDashboard';
 import PhishingForensicsLab from './components/PhishingForensicsLab';
 import DeepfakeMediaStudio from './components/DeepfakeMediaStudio';
 import AdversarialAttackSimulator from './components/AdversarialAttackSimulator';
 import { generate90Samples, AnalyzedSample } from './academicDataset';
-import { downloadReportDocx } from './utils/exportDocx';
-
 export default function App() {
   const [activeScreen, setActiveScreen] = useState<'dashboard' | 'phishing' | 'deepfake' | 'adversarial'>('dashboard');
   const [lastPhishingAnalysis, setLastPhishingAnalysis] = useState<any | null>(null);
-  const [isExportingDocx, setIsExportingDocx] = useState(false);
-  
   // Initialize with the 3 core seed samples, mapped to analyzed formats
   const [phishingHistory, setPhishingHistory] = useState<AnalyzedSample[]>(() => 
     generate90Samples().slice(0, 3)
@@ -157,24 +153,6 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => downloadReportDocx((loading) => setIsExportingDocx(loading))}
-              disabled={isExportingDocx}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white text-xs font-semibold shadow transition border border-indigo-400/30 cursor-pointer"
-              title="Download Comprehensive Academic Report in Word format (.docx)"
-            >
-              {isExportingDocx ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Preparing Docx...</span>
-                </>
-              ) : (
-                <>
-                  <FileDown className="w-3.5 h-3.5" />
-                  <span>Export Word Doc (.docx)</span>
-                </>
-              )}
-            </button>
             <div className="text-right hidden sm:block">
               <p className="text-[9px] text-slate-500 uppercase tracking-widest font-mono">Academic Session</p>
               <p className="text-xs font-mono font-bold text-indigo-400 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-500/10">Student: Rinor Basholli, Mentor: Tiago Pedrosa</p>
