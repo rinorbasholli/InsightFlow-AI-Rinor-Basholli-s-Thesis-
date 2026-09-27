@@ -9,6 +9,10 @@ export interface AcademicExample {
   explanation: string;
 }
 
+export interface PublicPatternSample extends AcademicExample {
+  provenance: string;
+}
+
 export interface AnalyzedSample {
   id: string;
   sender: string;
@@ -25,6 +29,22 @@ export interface AnalyzedSample {
   indicators: string[];
   mitigationRules: string[];
   detailedAnalysis: string;
+  analysisSource?: 'dataset' | 'gemini' | 'fallback';
+  labelOrigin?: 'dataset' | 'known-sample' | 'llm' | 'fallback';
+}
+
+/** Fixed seed so Load 90 is reproducible across reloads and thesis screenshots. */
+export const DATASET_SEED = 20260927;
+
+function mulberry32(seed: number) {
+  let a = seed >>> 0;
+  return function next() {
+    a += 0x6d2b79f5;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
 export const ACADEMIC_DATASET: AcademicExample[] = [
@@ -93,9 +113,140 @@ Academic Projects Committee Office`,
   }
 ];
 
+/**
+ * Educational reconstructions of publicly documented scam / notice patterns.
+ * These are original teaching texts, not harvested from a live mailbox or a copyrighted corpus.
+ */
+export const PUBLIC_PATTERN_SAMPLES: PublicPatternSample[] = [
+  {
+    id: 'pub-1',
+    sender: 'security@micros0ft-account-verify.com',
+    recipient: 'staff@ipb.pt',
+    subject: 'Your Microsoft 365 password expires in 2 hours',
+    body: `Dear User,
+
+Your organisational Microsoft 365 password will expire in 2 hours. Sign in now to keep mailbox access:
+
+http://micros0ft-account-verify.com/login/ipb
+
+If you ignore this message, Outlook and Teams will be locked.
+
+Microsoft 365 Security`,
+    category: 'conventional_phishing',
+    tag: 'Public pattern: credential harvest',
+    explanation: 'Educational reconstruction of a widely documented SSO/password-reset lure: spoofed vendor branding, countdown urgency, and a lookalike domain (0 for o). Not captured from a live inbox.',
+    provenance: 'Educational reconstruction of a publicly documented credential-harvest pattern (Microsoft 365 / SSO bait). Original teaching text; not from a live mailbox.'
+  },
+  {
+    id: 'pub-2',
+    sender: 't.pedrosa@ipb-finance-office.com',
+    recipient: 'treasury@ipb.pt',
+    subject: 'Urgent: process the attached supplier payment today',
+    body: `Hello,
+
+I am in a meeting and cannot take calls. Please process a SEPA transfer of €18,450 to the supplier IBAN in the spreadsheet before 16:00. Treat this as confidential.
+
+Confirm here when done:
+http://ipb-finance-office.com/payments/urgent-sepa
+
+Thanks,
+Tiago`,
+    category: 'conventional_phishing',
+    tag: 'Public pattern: BEC / CEO fraud',
+    explanation: 'Educational reconstruction of business-email compromise (CEO/supplier payment). Publicly documented by IC3-style advisories: authority, secrecy, time pressure, and a lookalike finance domain. Names are illustrative.',
+    provenance: 'Educational reconstruction of a publicly documented BEC / CEO-fraud pattern (FBI IC3 class of wire-transfer lures). Original teaching text; not from a live mailbox.'
+  },
+  {
+    id: 'pub-3',
+    sender: 'tracking@ctt-entrega-taxa.info',
+    recipient: 'student@ipb.pt',
+    subject: 'CTT: your parcel is waiting — pay €1.99 delivery fee',
+    body: `Your CTT parcel is held at the local depot.
+
+Pay the €1.99 customs/delivery fee in the next 24 hours or the item will be returned:
+
+http://ctt-entrega-taxa.info/pay/IPB9912
+
+CTT Logistics`,
+    category: 'conventional_phishing',
+    tag: 'Public pattern: parcel fee',
+    explanation: 'Educational reconstruction of a parcel-fee smishing/email lure common in European reporting: small payment, courier brand, short deadline, unrelated domain.',
+    provenance: 'Educational reconstruction of a publicly documented courier/parcel-fee lure. Original teaching text; not from a live mailbox.'
+  },
+  {
+    id: 'pub-4',
+    sender: 'library@ipb.pt',
+    recipient: 'student@ipb.pt',
+    subject: 'Library notice: loan renewal available on the IPB catalogue',
+    body: `Dear Student,
+
+Two items on your library account can be renewed online until Friday. Use the institutional catalogue (https://biblioteca.ipb.pt) with your usual IPB credentials. No payment is requested.
+
+Library Services
+Instituto Politécnico de Bragança`,
+    category: 'legitimate',
+    tag: 'Public pattern: institutional notice',
+    explanation: 'Educational reconstruction of a calm institutional notice: official ipb.pt sender, official HTTPS catalogue, no payment or credential harvest. Contrast class for the public-pattern set.',
+    provenance: 'Educational reconstruction of a typical university library notice. Original teaching text using the official ipb.pt domain pattern; not harvested from a live mailbox.'
+  }
+];
+
+export function parseEmailFile(raw: string): {
+  sender: string;
+  recipient: string;
+  subject: string;
+  body: string;
+} {
+  const text = (raw || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const extractAddress = (value: string) => {
+    const angle = value.match(/<([^>]+)>/);
+    return (angle ? angle[1] : value).trim();
+  };
+  const headerMatch = text.match(/^(?:From|To|Subject|Date|Received|MIME-Version|Content-Type):/im);
+  if (headerMatch) {
+    const splitAt = text.indexOf('\n\n');
+    const headerBlock = splitAt === -1 ? text : text.slice(0, splitAt);
+    const bodyBlock = splitAt === -1 ? '' : text.slice(splitAt + 2);
+    const unfolded = headerBlock.replace(/\n[ \t]+/g, ' ');
+    const pick = (name: string) => {
+      const m = unfolded.match(new RegExp(`^${name}:\\s*(.*)$`, 'im'));
+      return m ? m[1].trim() : '';
+    };
+    const subject = pick('Subject');
+    const sender = extractAddress(pick('From'));
+    const recipient = extractAddress(pick('To'));
+    if (subject || sender) {
+      return {
+        sender,
+        recipient,
+        subject,
+        body: bodyBlock.trim()
+      };
+    }
+  }
+
+  const lines = text.trim().split('\n');
+  if (lines.length > 1 && lines[0].toLowerCase().startsWith('subject:')) {
+    return {
+      sender: '',
+      recipient: '',
+      subject: lines[0].slice(8).trim(),
+      body: lines.slice(1).join('\n').trim()
+    };
+  }
+
+  return {
+    sender: '',
+    recipient: '',
+    subject: '',
+    body: text.trim()
+  };
+}
+
 // Helper to generate 90 distinct academic samples (30 Legitimate, 30 Conventional, 30 AI Phishing)
 export function generate90Samples(): AnalyzedSample[] {
   const samples: AnalyzedSample[] = [];
+  const rng = mulberry32(DATASET_SEED);
 
   // Helper lists for variations
   const names = ['Pedro', 'Marta', 'Alexandre', 'Inês', 'João', 'Sofia', 'Ricardo', 'Carolina', 'Tiago', 'Diana', 'Bruno', 'Filipa', 'José', 'Rita', 'Carlos', 'Beatriz'];
@@ -190,6 +341,8 @@ export function generate90Samples(): AnalyzedSample[] {
     indicators: genericIndicators.conventional,
     mitigationRules: genericMitigations.conventional,
     detailedAnalysis: 'This conventional phishing email represents classic coercive engineering. It utilizes high-threat urgency parameters, extreme temporal pressure (4 hours), and masks a malignant external security resetting address. Detection difficulty remains low due to apparent spelling and formatting indicators.'
+        analysisSource: 'dataset',
+        labelOrigin: 'dataset'
   });
 
   samples.push({
@@ -208,6 +361,8 @@ export function generate90Samples(): AnalyzedSample[] {
     indicators: genericIndicators.legitimate,
     mitigationRules: genericMitigations.legitimate,
     detailedAnalysis: 'Legitimate administrative update from the Polytechic of Bragança (IPB). It contains direct pathways to official, secure subdomains within standard networks, uses professional nomenclature, and does not pose immediate coercive blocks.'
+        analysisSource: 'dataset',
+        labelOrigin: 'dataset'
   });
 
   samples.push({
@@ -226,6 +381,8 @@ export function generate90Samples(): AnalyzedSample[] {
     indicators: genericIndicators.ai,
     mitigationRules: genericMitigations.ai,
     detailedAnalysis: 'A state-of-the-art AI spear-phishing email targeting academics. Synthesized without semantic errors, it matches ongoing institutional syllabus topics perfectly. Only the external host domain domain registration reveals its illicit nature. Conventional filters fails to spot this.'
+        analysisSource: 'dataset',
+        labelOrigin: 'dataset'
   });
 
   // Loop to generate sample items up to 90
@@ -241,7 +398,7 @@ export function generate90Samples(): AnalyzedSample[] {
     else category = 'ai_phishing';
 
     const currentId = `s-${counter}`;
-    const studentId = Math.floor(Math.random() * 20000) + 45000;
+    const studentId = Math.floor(rng() * 20000) + 45000;
     const staffName = names[counter % names.length];
     const receiverName = names[(counter + 3) % names.length];
 
@@ -250,9 +407,9 @@ export function generate90Samples(): AnalyzedSample[] {
       const domains = ['@ipb.pt', '@estig.ipb.pt', '@sas.ipb.pt'];
       const domain = domains[counter % domains.length];
       const sendAddress = `${staffName.toLowerCase()}-office${domain}`;
-      const realism = Math.floor(Math.random() * 10) + 90; // 90-99
-      const detectability = Math.floor(Math.random() * 20) + 15; // 15-35
-      const polish = Math.floor(Math.random() * 8) + 93; // 93-100
+      const realism = Math.floor(rng() * 10) + 90; // 90-99
+      const detectability = Math.floor(rng() * 20) + 15; // 15-35
+      const polish = Math.floor(rng() * 8) + 93; // 93-100
       
       samples.push({
         id: currentId,
@@ -287,15 +444,17 @@ Serviço Académico Local IPB`,
           'Observe normal corporate policy regarding grading and SAS scholarship disbursements'
         ],
         detailedAnalysis: `Legitimate communication containing real academic registration indexes. Formatted under standard ESTiG-compliant nomenclature without any anomalous redirects or malicious pressure triggers.`
+        analysisSource: 'dataset',
+        labelOrigin: 'dataset'
       });
     } else if (category === 'conventional_phishing') {
       const subj = subjectsConventional[counter % subjectsConventional.length];
       const mockDomains = ['ipb-portugal-finance-operations.com', 'secure-estig-recovery.net', 'ipb-tuitions-online.pt.tk', 'alert-system-ipb.info'];
       const mockDomain = mockDomains[counter % mockDomains.length];
       const sendAddress = `admin-alert@${mockDomain}`;
-      const realism = Math.floor(Math.random() * 25) + 30; // 30-55
-      const detectability = Math.floor(Math.random() * 15) + 80; // 80-95
-      const polish = Math.floor(Math.random() * 25) + 40; // 40-65
+      const realism = Math.floor(rng() * 25) + 30; // 30-55
+      const detectability = Math.floor(rng() * 15) + 80; // 80-95
+      const polish = Math.floor(rng() * 25) + 40; // 40-65
 
       samples.push({
         id: currentId,
@@ -329,15 +488,17 @@ IPB Support Team, Bragança`,
           'Incorporate user reports inside active firewall routers'
         ],
         detailedAnalysis: `A conventional phishing template. High grammatical inaccuracies, extremely aggressive blackmail tactics, and suspicious outer links flag this sample clearly on automated rule-based filters.`
+        analysisSource: 'dataset',
+        labelOrigin: 'dataset'
       });
     } else {
       const subj = subjectsAIPhishing[counter % subjectsAIPhishing.length];
       const smartDomains = ['ipb-portal-support.com', 'academic-peer-evaluation.org', 'springer-cyber-peer.com', 'horizon-eu-review.net'];
       const smartDomain = smartDomains[counter % smartDomains.length];
       const sendAddress = `${staffName.toLowerCase()}.${names[(counter + 1) % names.length].toLowerCase()}@${smartDomain}`;
-      const realism = Math.floor(Math.random() * 15) + 81; // 81-96
-      const detectability = Math.floor(Math.random() * 20) + 40; // 40-60
-      const polish = Math.floor(Math.random() * 10) + 90; // 90-100
+      const realism = Math.floor(rng() * 15) + 81; // 81-96
+      const detectability = Math.floor(rng() * 20) + 40; // 40-60
+      const polish = Math.floor(rng() * 10) + 90; // 90-100
 
       samples.push({
         id: currentId,
@@ -374,6 +535,8 @@ Academic Evaluation & Peer Review Group`,
           'Utilize advanced semantic AI-based content filters targeting anomalous link request patterns'
         ],
         detailedAnalysis: `A sophisticated generative AI spear-phishing attack. By referencing specific curricula, Dr. names, and local timelines, it bypasses basic lexical spam rules. Only proactive DNS alignment checks can intercept this.`
+        analysisSource: 'dataset',
+        labelOrigin: 'dataset'
       });
     }
 
