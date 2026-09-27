@@ -3,7 +3,6 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
-import { createReportDocxBuffer } from './server/generateDocxReport';
 
 dotenv.config();
 
@@ -533,22 +532,6 @@ Output JSON structured simulation parameters:
   }
 });
 
-// Endpoint to export comprehensive academic & technical report to Word Doc (.docx)
-app.get('/api/export-report-docx', async (req, res) => {
-  try {
-    const docxBuffer = await createReportDocxBuffer();
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', 'attachment; filename="AI_Cybersecurity_Risk_Lab_Academic_Report.docx"');
-    res.setHeader('Content-Length', docxBuffer.length);
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.end(docxBuffer, 'binary');
-  } catch (error) {
-    console.error('Error generating DOCX report:', error);
-    res.status(500).json({ error: 'Failed to generate Word document report' });
-  }
-});
 
 // Serve frontend assets
 async function startServer() {
