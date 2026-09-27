@@ -320,7 +320,7 @@ export default function AdversarialAttackSimulator() {
                   <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider">Original Label</p>
                   <p className="text-xs font-bold text-indigo-300 truncate">{originalClass}</p>
                   <p className="text-xs font-mono font-bold text-white">
-                    Conf: {result ? `${result.originalConfidence}%` : '98.5%'}
+                    Conf: {result ? `${result.originalConfidence}%` : '—'}
                   </p>
                 </div>
               </div>
@@ -356,7 +356,7 @@ export default function AdversarialAttackSimulator() {
               <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-850 space-y-3 flex flex-col justify-between">
                 <div className="flex justify-between items-center text-[10px] uppercase font-mono tracking-wider text-rose-400 font-bold border-b border-slate-900 pb-1.5">
                   <span>3. Tricked Image (x*)</span>
-                  <span className="text-rose-500 leading-none font-bold animate-pulse">ATTACK SUCCESS</span>
+                  {result ? <span className="text-rose-500 leading-none font-bold animate-pulse">ATTACK SUCCESS</span> : <span className="text-slate-500 leading-none font-bold">WAITING</span>}
                 </div>
 
                 <div className="relative aspect-square w-full rounded-lg overflow-hidden border border-rose-500/20 bg-slate-900">
@@ -441,7 +441,7 @@ export default function AdversarialAttackSimulator() {
                   Model Defense Analysis
                 </span>
                 <span className="text-[10px] font-mono bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded font-bold uppercase">
-                  Attack Success Rate: {result.targetConfidence > 80 ? '98.5%' : '84.2%'}
+                  Displayed ASR (UI threshold, not measured): {result.targetConfidence > 80 ? '98.5%' : '84.2%'}
                 </span>
               </div>
 
