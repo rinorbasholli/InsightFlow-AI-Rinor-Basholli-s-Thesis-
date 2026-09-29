@@ -162,7 +162,7 @@ export default function App() {
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
               <p className="text-[9px] text-slate-500 uppercase tracking-widest font-mono">Academic Session</p>
-              <p className="text-xs font-mono font-bold text-indigo-400 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-500/10">Student: Rinor Basholli, Mentor: Tiago Pedrosa</p>
+              <p className="text-xs font-mono font-bold text-indigo-400 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-500/10">Student: Rinor Basholli (69492), Mentor: Tiago Pedrosa</p>
             </div>
             <div className="text-right">
               <p className="text-[9px] text-slate-500 uppercase tracking-widest font-mono">Analysis status</p>
