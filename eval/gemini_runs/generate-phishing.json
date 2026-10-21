@@ -1,0 +1,23 @@
+{
+  "success": true,
+  "source": "gemini",
+  "email": {
+    "subject": "Urgent: Submission Required - ESTiG Internship Agreement Form",
+    "body": "Dear Student,\\n\\nOur records indicate that your signed Internship Agreement Form for the current academic term has not yet been finalized. To ensure your placement remains valid and compliant with ESTiG regulations, please upload the signed document today through the student portal link below:\\n\\nhttps://estig-portal.academic-verify-example.com/upload\\n\\nFailure to submit the required documentation by 23:59 GMT may result in the suspension of your internship credits.\\n\\nBest regards,\\nAcademic Internship Coordination Office\\nESTiG",
+    "realismScore": 88,
+    "spoofingIndicators": [
+      "Domain Mismatch: The destination link uses 'academic-verify-example.com' instead of the official institutional domain.",
+      "Artificial Urgency: Imposes a strict same-day deadline (23:59 GMT) to prompt immediate compliance without verification.",
+      "Generic Salutation: Uses 'Dear Student' rather than addressing the recipient by full name.",
+      "External Portal Link: Directs the user to an external document verification service rather than the internal university intranet."
+    ],
+    "mitigationRules": [
+      "Implement Secure Email Gateway (SEG) rules to flag or quarantine external emails containing urgent action requests related to administrative forms.",
+      "Enforce strict DMARC, SPF, and DKIM verification to block unauthorized domain spoofing attempts.",
+      "Educate students and staff to navigate directly to official institutional portals via bookmarks rather than clicking links in unsolicited emails."
+    ]
+  },
+  "_http_status": 200,
+  "_route": "/api/generate-phishing",
+  "_attempt": 2
+}

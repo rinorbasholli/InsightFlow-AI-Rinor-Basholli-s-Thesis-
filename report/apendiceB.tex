@@ -1,0 +1,68 @@
+\chapter{How to run the evaluation scripts}
+\label{app:eval}
+
+This appendix is the run book I used. It does not add new results.
+
+\section{Install and start the website}
+\label{sec:run-web}
+
+From the repository root:
+
+\begin{minted}{text}
+cp .env.example .env.local
+# set GEMINI_API_KEY, LAB_BASIC_USER, LAB_BASIC_PASS
+# optional: GEMINI_MODEL, EVAL_API_URL, EVAL_INTERNAL_TOKEN
+npm install
+npm test
+npm run dev
+\end{minted}
+
+The demo login name may be \texttt{ipb-examiners}. The password stays in the environment file. I do not write it here.
+
+\section{Phishing benchmark}
+\label{sec:run-phish}
+
+\begin{minted}{text}
+python3 eval/phishing/run_benchmark.py
+\end{minted}
+
+Outputs:
+
+\begin{itemize}
+\item \texttt{eval/phishing/corpus.jsonl}
+\item \texttt{eval/phishing/results/phishing\_metrics.json}
+\item \texttt{eval/phishing/results/predictions.csv}
+\item \texttt{eval/phishing/results/MANUAL\_REVIEW.csv}
+\end{itemize}
+
+I already have one export of \texttt{phishing\_metrics.json}. Chapter~\ref{cha:eval} cites it. I still need to fill \texttt{rinor\_agrees} in the manual review file before the viva.
+
+\section{Adversarial batch export}
+\label{sec:run-adv}
+
+\begin{minted}{text}
+python3 -m pip install -r eval/requirements.txt
+python3 eval/adversarial/run_attacks.py
+\end{minted}
+
+The script should write \texttt{eval/adversarial/results/adversarial\_metrics.json}. When I wrote Chapter~\ref{cha:eval}, that file was missing. After a successful run the JSON must contain \texttt{clean\_accuracy}, per-bucket FGSM/PGD robust accuracy, ASR, and mean $L_\infty$, with \texttt{source: "computed"}.
+
+\section{Live attack service}
+\label{sec:run-svc}
+
+\begin{minted}{text}
+python3 eval/adversarial/service.py
+\end{minted}
+
+Default port: 8001. Express uses \texttt{EVAL\_API\_URL} (default \texttt{http://127.0.0.1:8001}). Health: \texttt{GET /api/eval/health} on the Node server.
+
+\section{Injection fixture used in tests}
+\label{sec:run-tests}
+
+The unit tests live in \texttt{tests/labSecurity.test.ts}. One accepted string is the demo user name:
+
+\begin{minted}{javascript}
+assert.equal(timingSafeEqualString('ipb-examiners', 'ipb-examiners'), true);
+\end{minted}
+
+That line is a string-equality fixture. It is not a password.

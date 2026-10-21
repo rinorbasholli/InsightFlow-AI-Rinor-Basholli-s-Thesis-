@@ -1,0 +1,51 @@
+{
+  "success": true,
+  "source": "gemini",
+  "deepfakeAnalysis": {
+    "facialIrregularities": [
+      "Boundary blur along the jawline during lateral head rotation",
+      "Asymmetrical corneal reflections under consistent room lighting",
+      "Unnatural warping around the lips during plosive phoneme articulation"
+    ],
+    "audioAnomalies": [
+      "Complete absence of physiological breathing pauses and air intake sounds",
+      "Metallic sibilance and robotic phase cancellation on 's' and 'z' sounds",
+      "Inconsistent room impulse response between speaker voice and background noise"
+    ],
+    "simulatedClassification": "synthesis-high",
+    "markers": [
+      {
+        "name": "Jawline Blending Artifact",
+        "description": "Noticeable boundary softening and skin texture mismatch along the lower mandible, typical of face-swapping autoencoders.",
+        "confidence": 94.5,
+        "category": "digital"
+      },
+      {
+        "name": "Corneal Reflection Discrepancy",
+        "description": "Specular highlights in the left and right eyes exhibit inconsistent light source vectors.",
+        "confidence": 91.2,
+        "category": "physical"
+      },
+      {
+        "name": "Acoustic Respiration Absence",
+        "description": "Synthesized voice track lacks natural inhalation and exhalation sounds between complex sentences.",
+        "confidence": 89,
+        "category": "acoustic"
+      },
+      {
+        "name": "Viseme-Phoneme Desynchronization",
+        "description": "Lip movements visually lag behind vocalized audio by approximately 120 milliseconds during rapid dialogue.",
+        "confidence": 86.7,
+        "category": "temporal"
+      }
+    ],
+    "actionableDefences": [
+      "Verify high-risk or financial requests using a pre-established out-of-band channel, such as calling a known phone number directly.",
+      "Implement a pre-shared verbal passphrase or shared secret protocol for validating emergency financial authorizations.",
+      "Request live video callers to perform specific spatial interactions, such as turning their head sideways or passing a hand in front of their face."
+    ]
+  },
+  "_http_status": 200,
+  "_elapsed_s": 9.26,
+  "_route": "/api/analyze-media-deepfake"
+}

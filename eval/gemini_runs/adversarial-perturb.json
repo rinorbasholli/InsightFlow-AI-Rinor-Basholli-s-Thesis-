@@ -1,0 +1,22 @@
+{
+  "success": true,
+  "source": "computed",
+  "perturbation": {
+    "originalClass": "airplane",
+    "originalConfidence": 100,
+    "targetClass": "automobile",
+    "targetConfidence": 61.89,
+    "noiseStrength": 0.20534,
+    "mathematicalLogs": "Real FGSM on cifar10_resnet56\nx_adv = clip(x + eps * sign(grad_x J), 0, 1), eps=0.05\nL_inf=0.20534; clean=airplane 100.0%; adv=automobile 61.9%",
+    "robustDefenseSteps": [
+      "Adversarial training with FGSM/PGD examples in the training loop.",
+      "Input preprocessing (JPEG compression or spatial smoothing) before inference.",
+      "Do not trust a single softmax score as a security control."
+    ],
+    "requestedArchitecture": "ResNet-50",
+    "dataset": "CIFAR-10"
+  },
+  "_http_status": 200,
+  "_elapsed_s": 2.41,
+  "_route": "/api/adversarial-perturb"
+}

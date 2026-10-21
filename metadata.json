@@ -1,0 +1,6 @@
+{
+  "name": "AI Cybersecurity Risk Lab",
+  "description": "Educational laboratory for deepfakes, AI-generated phishing emails, and adversarial attacks.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

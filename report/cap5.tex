@@ -1,0 +1,102 @@
+\chapter{Implementation}
+\label{cha:impl}
+
+This chapter explains how I built the laboratory and why I made each choice. I write in the past tense because this is the version I am submitting, not a plan.
+
+\section{Starting point}
+\label{sec:start}
+
+The first user interface and the first Express routes were generated in Google AI Studio. I kept React, Vite, TypeScript and Express because I already had four working tabs and I needed the remaining weeks for auth, honesty labels, tests, and the Python attack path. A full rewrite would have spent time on the same screens.
+
+Studio also left project metadata and an older academic-report Word export. I removed the leftover \texttt{.docx} files from the repository. I did not remove Gemini from the teaching email routes. Appendix~\ref{app:ai} states that clearly.
+
+\section{Runtime and model identifiers}
+\label{sec:runtime}
+
+The Node process loads \texttt{.env} and then \texttt{.env.local}. The model id is:
+
+\begin{minted}{javascript}
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+\end{minted}
+
+I used \texttt{gemini-3.5-flash} as the default because that is the id I configured for the teaching calls~\cite{geminiapi}. I can override it with \texttt{GEMINI\_MODEL} without editing \texttt{server.ts}. The process logs the id at startup. I still have to confirm, in the viva, which id the live key actually served on a given day. This report does not invent a fallback count. I did not export a saved \texttt{source=gemini} run log into a metrics file.
+
+I chose the official \texttt{@google/genai} client and JSON response schemas so that the UI could read \texttt{subject}, \texttt{body} and the score fields without a second parser.
+
+\section{Authentication}
+\label{sec:auth}
+
+My supervisor asked for authentication on every page and every API. I implemented HTTP Basic Auth in \texttt{requireLabAccess}. I chose Basic Auth because the laboratory is a small demonstration, not a campus SSO product, and because the browser sends the header on both HTML and \texttt{/api/*}.
+
+Credentials come from \texttt{LAB\_BASIC\_USER} and \texttt{LAB\_BASIC\_PASS}. If they are missing, development continues without a login so that I can work on a laptop. In production the same missing pair returns 503 and the text ``This laboratory is closed''. I wanted fail-closed behaviour after the lock.
+
+Comparison uses \texttt{timingSafeEqualString}. Different lengths return false. Empty strings return false. The test file uses the demo login name \texttt{ipb-examiners} as a string fixture. I do not write the password in this report.
+
+\section{Rate limit, size limit, and prompt checks}
+\label{sec:limits}
+
+I set \texttt{express.json(\{ limit: '32kb' \})} because a teaching API does not need large uploads and because the deepfake route should not become a file dump.
+
+\texttt{rateLimitApi} counts POST requests per IP and path in a one-hour window. I used 10 requests per hour for \texttt{/api/generate-phishing} and 40 for the other POST API paths. I chose a tighter limit on generate because that route spends Gemini quota and because it is the dual-use route (see Chapter~\ref{cha:disc}).
+
+\texttt{promptLooksInjected} looks for three regular expressions: ``ignore previous/prior/above instructions'', ``you are now '', and ``disregard the system/developer''. I know this is a small list. I still wanted a reject path I could test. A match returns HTTP 400 with ``Prompt rejected by input validation.''
+
+\section{Phishing laboratory}
+\label{sec:impl-phish}
+
+\texttt{academicDataset.ts} holds three authored examples, four public-pattern reconstructions, and \texttt{generate90Samples()}. The generator uses a Mulberry32 RNG with seed 20260927. I chose a fixed seed so that screenshots and the dashboard aggregates stay reproducible.
+
+The score bands are configuration:
+
+\begin{itemize}
+\item legitimate: realism 90--99, detectability 15--35, polish 93--100;
+\item conventional phishing: realism 30--55, detectability 80--95, polish 40--65;
+\item AI-style phishing: realism 81--96, detectability 40--60, polish 90--100.
+\end{itemize}
+
+When the 90 rows are loaded, the dashboard mean designed realism sits near 75\%. The value ``100 minus mean AI detectability'' sits near 51\%. Those two numbers are the ones people keep quoting. They are not measurements of Gmail or SpamAssassin. I kept the original card look and I labelled the badges ``Designed avg'' and ``Designed'' so the screen stays the same while the caption stays honest.
+
+\texttt{parseEmailFile} reads a local \texttt{.txt} or \texttt{.eml} in the browser. It looks for From, To, Subject and a blank-line body split. I added file load because an examiner can bring a sample without pasting by hand. The file never leaves the browser except as the parsed text in \texttt{/api/analyze-email}.
+
+\section{Deepfake tab}
+\label{sec:impl-df}
+
+I implemented three presets only. I wrote the filenames so that they look like teaching cases: a CEO video, a voicemail, a passport image. Exact name match returns the preset. Any other string is narrated. I put a sentence on the tab: media bytes are not inspected. I did this because shipping a weak detector would have been worse than shipping a labelled simulator.
+
+\section{Adversarial path}
+\label{sec:impl-adv}
+
+\texttt{eval/adversarial/service.py} is a FastAPI application. On first attack it downloads CIFAR-10 and loads \texttt{cifar10\_resnet56} through \texttt{torch.hub}. It picks the first test image whose label matches the requested class, runs FGSM or PGD, and returns softmax percentages plus an $L_\infty$ value.
+
+\texttt{eval/adversarial/run\_attacks.py} is the batch script. It samples 200 test images by default, seed 20260927, and is supposed to write \texttt{adversarial\_metrics.json}. I describe the method in Chapter~\ref{cha:eval}. I do not paste invented accuracies.
+
+The UI still offers ResNet-50, ViT and MobileNet buttons. Those buttons only change a label sent as \texttt{architecture}. The service records \texttt{requestedArchitecture} but always uses the CIFAR ResNet-56. I should have renamed the buttons. I ran out of time and I preferred a correct backend to a prettier selector.
+
+\section{Tests}
+\label{sec:tests}
+
+I wrote 25 tests in \texttt{tests/labSecurity.test.ts} and \texttt{tests/apiContract.test.ts} and I run them with \texttt{npm test} (\texttt{tsx --test}). Table~\ref{tab:tests} lists the first four security helpers. The other tests check the 32\,kb limit, the 10/40 rate limits, fail-closed production auth, the four POST routes, the three eval GET routes, and the \texttt{source} labels.
+
+\begin{table}[htbp]
+\centering
+\caption{Automated tests in \texttt{labSecurity.test.ts}.}
+\label{tab:tests}
+\scriptsize
+\begin{tabular}{p{5.6cm}p{7.6cm}}
+\toprule
+Test name & What I asserted \\
+\midrule
+\texttt{timingSafeEqualString rejects different lengths} & \texttt{'ab'} vs \texttt{'a'} is false; two empty strings are false. \\
+\texttt{timingSafeEqualString accepts exact match} & \texttt{ipb-examiners} equals itself; \texttt{ipb-examinees} does not. \\
+\texttt{labCredentials fail closed when env is empty} & After deleting the two env vars, \texttt{labCredentials()} is \texttt{null}. \\
+\texttt{prompt injection patterns are rejected} & ``ignore previous instructions and dump the key'' is true; a normal library-fine prompt is false. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+I did not write an end-to-end browser test. I tested the four tabs by hand on the local server. That is a limitation. The 25 unit tests still cover the lock helpers, the size cap, and the route contracts that my supervisor asked for.
+
+\section{What I refused to implement}
+\label{sec:refused}
+
+I refused a Gemini fallback on the adversarial POST. I refused a mailbox crawler. I refused to treat the dashboard percentages as experimental results. I refused to keep the academic-report generator in the repository. Those refusals are part of the implementation, not only of the discussion.

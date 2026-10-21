@@ -1,0 +1,36 @@
+\chapter{Conclusion and future work}
+\label{cha:conc}
+
+\section{Conclusion}
+\label{sec:conc}
+
+I implemented InsightFlow AI as an educational laboratory for three AI cybersecurity risks: AI-generated phishing, deepfake scenarios, and adversarial examples. I did this for the Informatics Engineering project course at ESTiG, under the supervision of Tiago Pedrosa. The official title is the title on the cover.
+
+I can now answer the research questions in a limited way.
+
+RQ1. I generate and analyse teaching emails with Gemini or a fallback, and I keep dataset labels on the 90 seeded rows. The source field is the part that makes the answer usable in a viva. The reconstructed TF-IDF wording benchmark reached F1 $= 0.756$ on 57 test rows (187 total). I read that as a small teaching corpus, not as a mailbox detector.
+
+RQ2. I teach deepfake talking points with three filename presets and a narrated fallback. I do not inspect bytes. That is an honest teaching tab, not a forensics tool.
+
+RQ3. I wired FGSM and PGD to a CIFAR-10 ResNet-56 so that a clean-accuracy number, once exported, can mean something on $32 \times 32$ images. My supervisor asked for ResNet-50. I explained the CIFAR choice in Section~\ref{sec:resnet-choice}. The batch metrics file was not yet exported when I wrote Chapter~\ref{cha:eval}.
+
+The 75\% and 51\% dashboard values stay in the configuration column. I will not move them into the findings column.
+
+The first website was started in Google AI Studio. Gemini still writes teaching mail. I still have to defend every number myself.
+
+\section{Future work}
+\label{sec:future}
+
+If I continue the project after delivery, I would do the following.
+
+\begin{enumerate}
+\item Run \texttt{eval/adversarial/run\_attacks.py} to completion and replace every \textit{not yet exported} cell with the JSON fields. Then freeze a tag and take new screenshots.
+\item Replace the Studio architecture buttons with one label: CIFAR-10 ResNet-56.
+\item Build a harder phishing corpus, or drop the TF-IDF score from the report and keep only a manual review of the teaching rows.
+\item Count \texttt{source=gemini} versus \texttt{source=fallback} on one recorded run per route, as A4 asked.
+\item Add a real frame-level detector only if I can run it on a public set such as FaceForensics++ and report that set's protocol~\cite{rossler2019faceforensics}.
+\item Add structured logs that store a timestamp and a hashed user name, not the email body, if an examiner needs repudiation.
+\item Write one or two browser tests for login, load-90, and the 503 path of the attack tab.
+\end{enumerate}
+
+I would not add an SMTP sender. I would not harvest a mailbox. I would not present template bands as clinical evidence.

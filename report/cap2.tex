@@ -1,0 +1,75 @@
+\chapter{State of the art}
+\label{cha:sota}
+
+This chapter summarises the work I read before I built the laboratory. I grouped it into phishing, deepfakes, adversarial examples, and educational platforms. At the end I state the gap. I am not claiming that no similar tool exists for each topic alone. Similar tools exist separately. What I did not find is one integrated educational platform that covers the three topics and labels the source of each answer.
+
+\section{AI-generated phishing}
+\label{sec:sota-phish}
+
+Phishing remains a high-volume social-engineering channel. Industry reports still list it among the main intrusion paths~\cite{enisa2024threat,apwg2024}. Classic lures use urgency, lookalike domains, parcel fees, and password-reset pages. Those patterns are well known. The new part is that a large language model can write the lure in clean language and tailor it to a university or a company~\cite{vaswani2017attention,hazell2023spear}.
+
+Hazell showed that language models can scale spear-phishing text~\cite{hazell2023spear}. Heiding et al.\ compared LLM-written phishing with human-written phishing and also used models as detectors~\cite{heiding2024devising}. I used those papers as context. I did not repeat their user studies. My laboratory is a teaching bench, not a field trial on staff mailboxes.
+
+For campaigns, the open-source tool that my supervisor named in the meeting as ``GoFish'' is GoPhish~\cite{gophish}. GoPhish sends and tracks phishing campaigns. It is useful for awareness exercises. It is not a three-risk AI laboratory. It does not generate deepfake scenarios and it does not run FGSM. I named it here because it is the usual reference when someone asks ``is there already a phishing teaching tool?'' Yes. GoPhish exists. I still needed something else for the other two risks and for the source labels.
+
+I also looked at ordinary spam filters and at simple bag-of-words classifiers. A TF-IDF vectorizer plus logistic regression is a standard baseline. I used that baseline in \texttt{eval/phishing/run\_benchmark.py}. Chapter~\ref{cha:eval} reports the exported scores and explains why a perfect F1 on a reconstructed corpus is not a finding.
+
+\section{Deepfake tools and datasets}
+\label{sec:sota-df}
+
+Mirsky and Lee survey how deepfakes are made and how they are detected~\cite{mirsky2021deepfake}. StyleGAN is a common reference for high-quality synthetic faces~\cite{karras2019stylegan}. FaceForensics++ is a standard manipulated-face dataset with several forgery methods~\cite{rossler2019faceforensics}. Celeb-DF is a later, harder deepfake set~\cite{li2020celebdf}. The DeepFake Detection Challenge published another large set for detector training~\cite{dolhansky2020dfdc}.
+
+Those datasets exist so that researchers can train and compare detectors on real pixels. My deepfake tab does not do that. I chose not to ship a face-forensics model in the student web app. The tab matches three hardcoded filenames to preset JSON, or it asks Gemini (or a fallback) to narrate markers from the filename and a text prompt. Bytes are not inspected. I state that in the user interface and again in Chapter~\ref{cha:impl}. A student who wants a real detector should start from FaceForensics++ or Celeb-DF, not from my preset list.
+
+I still needed the deepfake literature so that the teaching text is not invented from nothing. Blinking, lighting, and sibilants are common talking points in that survey literature~\cite{mirsky2021deepfake}. I used them as educational markers, not as measured scores on a video file.
+
+\section{Adversarial attacks}
+\label{sec:sota-adv}
+
+Szegedy et al.\ showed that neural networks can change class after a small perturbation~\cite{szegedy2014intriguing}. Goodfellow, Shlens and Szegedy proposed FGSM: add $\varepsilon$ times the sign of the input gradient of the loss~\cite{goodfellow2015explaining}. Madry et al.\ studied a stronger iterated attack, PGD, and used it as a robustness baseline~\cite{madry2018towards}. Biggio and Roli review ten years of adversarial machine learning~\cite{biggio2018wild}.
+
+Torchattacks is a widely used PyTorch package that implements FGSM, PGD and other attacks~\cite{kim2020torchattacks}. My supervisor asked for real FGSM and PGD, on the order of 200 images, with clean accuracy, robust accuracy, attack success rate, and perturbation size. He also mentioned ResNet-50~\cite{he2016resnet}.
+
+I chose a CIFAR-10 pretrained ResNet-56 from \texttt{chenyaofo/pytorch-cifar-models}~\cite{chenyaofo2021cifar,krizhevsky2009cifar,he2016resnet}. I explain that choice in Section~\ref{sec:resnet-choice}. The short version is that CIFAR-10 images are $32 \times 32$. An ImageNet ResNet-50 expects a different input size and a 1000-class head. Clean accuracy on upscaled CIFAR images would not be a fair teaching number.
+
+My evaluation script prefers \texttt{torchattacks} when the package imports. If the import fails, the same file falls back to my own FGSM and PGD loops. The live Express route calls the Python service. Gemini is not in that path.
+
+\section{Educational platforms}
+\label{sec:sota-edu}
+
+TryHackMe and Hack The Box are popular platforms for practical security labs~\cite{tryhackme,hackthebox}. They cover many rooms: web attacks, privilege escalation, some phishing awareness, some machine-learning notes depending on the room. They are not a single small application that a bachelor student can host and fully explain line by line.
+
+University courses also use isolated notebooks: one notebook for FGSM, one lecture on deepfakes, one awareness talk on phishing. That split is honest, but it makes it hard to show a labelled workflow. A student can finish a torchattacks notebook without ever seeing a phishing source label, and the other way around.
+
+\section{The gap I tried to fill}
+\label{sec:gap}
+
+Table~\ref{tab:gap} is the comparison I used when I argued for building InsightFlow AI.
+
+\begin{table}[htbp]
+\centering
+\caption{Related tools exist for each risk. I did not find one educational platform that covers all three with a labelled source field.}
+\label{tab:gap}
+\scriptsize
+\begin{tabular}{p{3.2cm}p{2.0cm}p{2.0cm}p{2.0cm}p{2.6cm}}
+\toprule
+Tool or resource & Phishing & Deepfake & Adversarial & Source label on every answer \\
+\midrule
+GoPhish~\cite{gophish} & Campaigns & No & No & Not this design \\
+FaceForensics++, Celeb-DF~\cite{rossler2019faceforensics,li2020celebdf} & No & Datasets / detectors & No & Research labels, not a web lab \\
+StyleGAN papers~\cite{karras2019stylegan} & No & Generation & No & No teaching UI \\
+Torchattacks~\cite{kim2020torchattacks} & No & No & Library & No web workflow \\
+TryHackMe / HTB~\cite{tryhackme,hackthebox} & Some rooms & Rare / separate & Rare / separate & Platform-specific \\
+InsightFlow AI (this work) & Teaching generate / analyse & Filename scenarios, no bytes & FGSM/PGD on CIFAR ResNet-56 & \texttt{gemini}/\texttt{fallback}/\texttt{preset}/\texttt{computed} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The gap is therefore narrow and I want to keep it honest. The gap is not ``nobody studied phishing.'' The gap is not ``nobody trained a deepfake detector.'' The gap is not ``nobody implemented FGSM.'' The gap is the missing integration for teaching: one laboratory, three risks, and a source field that stops me from hiding a fallback behind a fake confidence.
+
+\section{Why I used a CIFAR ResNet-56}
+\label{sec:resnet-choice}
+
+My supervisor asked for ResNet-50. ResNet is the residual architecture of He et al.~\cite{he2016resnet}. The common ResNet-50 checkpoint is trained on ImageNet. CIFAR-10 is a $32 \times 32$ dataset with ten classes~\cite{krizhevsky2009cifar}. If I had loaded ImageNet ResNet-50 and fed it CIFAR images, I would have needed a resize and a different label space. Clean accuracy would then mix interpolation artefacts with the attack. I did not want that in a chapter that already has to be careful with numbers.
+
+Chen's \texttt{pytorch-cifar-models} repository publishes a \texttt{cifar10\_resnet56} checkpoint trained on CIFAR-10~\cite{chenyaofo2021cifar}. I used that checkpoint so that a clean-accuracy figure, once exported, can be compared with robust accuracy on the same $32 \times 32$ inputs. The live UI still shows a ResNet-50 button from the earlier Studio layout. That button is a display label. The Python service always loads \texttt{cifar10\_resnet56}.

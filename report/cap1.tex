@@ -1,0 +1,67 @@
+\chapter{Introduction}
+\label{cha:intro}
+
+This chapter states the context of the work, the problem I tried to treat, the objectives, the research questions, the contributions, and the structure of the report. I wrote it as the author of the laboratory, not as an external auditor.
+
+\section{Context}
+\label{sec:context}
+
+Artificial intelligence is now easy to call from a student project. A language model can write a fluent email in a few seconds~\cite{hazell2023spear,heiding2024devising}. A generative model can produce a face that never sat in front of a camera~\cite{karras2019stylegan,mirsky2021deepfake}. A small change in pixel values can move the class of an image classifier~\cite{szegedy2014intriguing,goodfellow2015explaining}. Those three facts are already in the public literature. What I did not have, as a student at ESTiG, was one place where I could show the three risks together and say honestly where each number came from.
+
+The official title of this project is \emph{Cybersecurity Risks of Artificial Intelligence: A Practical Study of Deepfakes, AI-Generated Phishing, and Adversarial Attacks}. The live brand of the application is InsightFlow AI, also labelled AI Cybersecurity Risk Lab. I implemented a web laboratory for the Informatics Engineering project course at the Instituto Politécnico de Bragança, School of Technology and Management (ESTiG). Professor Tiago Pedrosa supervised the work.
+
+I started from a first web application that Google AI Studio generated. I then locked the laboratory, added tests, and wired a local evaluation service. Appendix~\ref{app:ai} declares that path. I still have to defend every number in the viva.
+
+\section{Problem}
+\label{sec:problem}
+
+Teaching material on phishing, deepfakes, and adversarial examples usually lives in separate tools. GoPhish is a campaign platform~\cite{gophish}. FaceForensics++ and Celeb-DF are research datasets~\cite{rossler2019faceforensics,li2020celebdf}. Torchattacks is a PyTorch library for FGSM and PGD~\cite{kim2020torchattacks,goodfellow2015explaining,madry2018towards}. I did not find a single educational web platform that covers the three topics in one student workflow and labels every analytical answer with a source field.
+
+There is a second problem. It is easy to let a language model invent a confidence score. My supervisor asked that at least one module compute from real model outputs, and that I do not present dashboard decoration as science. The 75\% and 51\% figures on the dashboard come from score bands I wrote in \texttt{academicDataset.ts} with seed 20260927. They are configuration. They are not findings. Chapter~\ref{cha:eval} repeats that point.
+
+\section{Objectives}
+\label{sec:objectives}
+
+I set the following objectives.
+
+\begin{enumerate}
+\item Build one educational web laboratory that shows AI-generated phishing, a deepfake teaching tab, and an adversarial image attack in the same application.
+\item Keep HTTP Basic Auth on every page and every API route in production, with secrets outside git.
+\item Label every analytical JSON response with \texttt{source} equal to \texttt{gemini}, \texttt{fallback}, \texttt{preset}, or \texttt{computed}.
+\item Use Gemini only on the teaching email routes (and on non-preset deepfake filenames). Do not use Gemini to invent adversarial confidences.
+\item Implement FGSM and PGD against a pretrained classifier, with a path to export clean accuracy, robust accuracy, attack success rate, and perturbation size.
+\item Write functional and non-functional requirements, use cases, architecture, tests, a STRIDE note, and an ethics note.
+\item Cite only numbers that exist in exported files. If a file is missing, say so.
+\end{enumerate}
+
+\section{Research questions}
+\label{sec:rqs}
+
+I used three research questions. They are teaching questions, not claims about the internet at large.
+
+\begin{description}
+\item[RQ1] How can a student laboratory generate and analyse AI-written phishing mail next to conventional phishing and legitimate institutional text, while saying whether Gemini, a fallback, or a dataset label produced the answer?
+\item[RQ2] How can a deepfake tab teach common visual and audio talking points without pretending to inspect media bytes?
+\item[RQ3] How can FGSM and PGD be run on a real pretrained classifier so that clean accuracy and robust accuracy are meaningful, and so that Gemini is not used as a substitute when the attack service is down?
+\end{description}
+
+\section{Contributions}
+\label{sec:contrib}
+
+The main contribution is the laboratory itself: a React and Express application, a Python evaluation service, and this report.
+
+I also contributed the following concrete pieces.
+
+\begin{itemize}
+\item An in-memory teaching set of 90 emails (30 legitimate, 30 conventional phishing, 30 AI-style phishing) generated with seed 20260927, plus three authored exemplars and four educational reconstructions of public scam or notice patterns. I did not harvest a mailbox.
+\item Express routes that return \texttt{source} on every analysis. The adversarial route returns 503 if the Python service is down. It does not call Gemini.
+\item HTTP Basic Auth, a 32\,kB JSON body limit, a prompt-injection reject list, and an hourly rate limit (10 requests per IP for \texttt{/api/generate-phishing}, 40 for other \texttt{POST /api/} paths).
+\item Four automated tests in \texttt{tests/labSecurity.test.ts}.
+\item A phishing benchmark script that exported \texttt{eval/phishing/results/phishing\_metrics.json}. I report those numbers in Chapter~\ref{cha:eval} and I treat the perfect F1 as a limitation.
+\item An adversarial script designed to export \texttt{eval/adversarial/results/adversarial\_metrics.json}. That file did not exist when I wrote Chapter~\ref{cha:eval}.
+\end{itemize}
+
+\section{Structure of the report}
+\label{sec:structure}
+
+Chapter~\ref{cha:sota} reviews related tools and papers and states the gap I tried to fill. Chapter~\ref{cha:req} lists requirements and use cases. Chapter~\ref{cha:arch} describes the architecture, sequence flows, the client-only data model, and the API contracts. Chapter~\ref{cha:impl} explains the implementation choices and the tests. Chapter~\ref{cha:eval} describes the evaluation method and the numbers I actually have. Chapter~\ref{cha:disc} discusses limitations, ethics, dual use, and STRIDE. Chapter~\ref{cha:conc} concludes and lists future work. Appendix~\ref{app:ai} is the AI declaration and the TRACE of Studio metadata. Appendix~\ref{app:eval} says how to run the evaluation scripts.
