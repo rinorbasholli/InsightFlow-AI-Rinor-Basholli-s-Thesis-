@@ -1,66 +1,59 @@
-\chapter{How to run the evaluation scripts}
+\chapter{Reproducing the results}
 \label{app:eval}
 
-This appendix is the run book I used. It does not add new results.
+This appendix explains how to run the laboratory and regenerate every result reported in Chapter~\ref{cha:eval}. Commands are run from the repository root.
 
-\section{Install and start the website}
+\section{Environment}
+\label{sec:run-env}
+
+The results were produced with Node.js~22, Python~3, PyTorch~2.14.1 (recorded in \path{adversarial_metrics.json}) and scikit-learn; the phishing results were also reproduced independently with scikit-learn~1.9.1, with byte-identical output. The adversarial results were produced on a CPU. The CIFAR-10 test set must be present under \path{eval/adversarial/results/cifar10/}; the model weights are downloaded by \texttt{torch.hub} on first use.
+
+\section{Running the laboratory}
 \label{sec:run-web}
-
-From the repository root:
 
 \begin{minted}{text}
 cp .env.example .env.local
-# set GEMINI_API_KEY, LAB_BASIC_USER, LAB_BASIC_PASS
+# set GEMINI_API_KEY, LAB_BASIC_USER and LAB_BASIC_PASS
 # optional: GEMINI_MODEL, EVAL_API_URL, EVAL_INTERNAL_TOKEN
 npm install
 npm test
-npm run dev
+python3 eval/adversarial/service.py &   # attack service on port 8001
+npm run dev                              # http://localhost:3000
 \end{minted}
 
-Sign in at \texttt{http://localhost:3000} with the credentials set in the environment file.
+For a production-style run, \texttt{npm run build} followed by \path{deploy/start-live-lab.sh} starts both processes and refuses to start without credentials. The container images are built from \texttt{Dockerfile} (web server only) and \path{deploy/Dockerfile.all-in-one} (web server and attack service).
 
 \section{Phishing benchmark}
 \label{sec:run-phish}
 
 \begin{minted}{text}
+python3 -m pip install -r eval/requirements.txt
 python3 eval/phishing/run_benchmark.py
 \end{minted}
 
-Outputs:
+The script regenerates \path{eval/phishing/corpus.jsonl} from code and writes \path{phishing_metrics.json} and \texttt{predictions.csv} under \path{eval/phishing/results/}. It does not overwrite \path{MANUAL_REVIEW.csv}.
 
-\begin{itemize}
-\item \texttt{eval/phishing/corpus.jsonl}
-\item \texttt{eval/phishing/results/phishing\_metrics.json}
-\item \texttt{eval/phishing/results/predictions.csv}
-\item \texttt{eval/phishing/results/MANUAL\_REVIEW.csv}
-\end{itemize}
-
-I already have one export of \texttt{phishing\_metrics.json}. Chapter~\ref{cha:eval} cites it. Twenty rows in \texttt{MANUAL\_REVIEW.csv} are marked \texttt{rinor\_agrees=yes}.
-
-\section{Adversarial batch export}
+\section{Adversarial batch}
 \label{sec:run-adv}
 
 \begin{minted}{text}
-python3 -m pip install -r eval/requirements.txt
-python3 eval/adversarial/run_attacks.py
+python3 eval/adversarial/run_attacks.py \
+  2>&1 | tee eval/adversarial/results/run200_full.txt
 \end{minted}
 
-The script writes \texttt{eval/adversarial/results/adversarial\_metrics.json}. Chapter~\ref{cha:eval} copies that file. The JSON contains \texttt{clean\_accuracy}, per-bucket FGSM/PGD robust accuracy, ASR, and mean $L_\infty$, with \texttt{source: "computed"}. The batch is untargeted. The live service on port 8001 is untargeted by default and uses the same pixel-space clip.
+The script writes \path{eval/adversarial/results/adversarial_metrics.json}, including the commit and PyTorch version, and stops with an error if any perturbation exceeds its budget. The log of the reported run is \path{run200_full.txt}.
 
-\section{Live attack service}
-\label{sec:run-svc}
+\section{Live attack calls}
+\label{sec:run-live}
+
+With the attack service running, the recorded live calls are reproduced with:
 
 \begin{minted}{text}
-python3 eval/adversarial/service.py
-\end{minted}
-
-Default port: 8001. Express uses \texttt{EVAL\_API\_URL} (default \texttt{http://127.0.0.1:8001}). Health: \texttt{GET /api/eval/health} on the Node server.
-
-\section{Injection fixture used in tests}
-\label{sec:run-tests}
-
-The unit tests live in \texttt{tests/labSecurity.test.ts}. One equality fixture is:
-
-\begin{minted}{javascript}
-assert.equal(timingSafeEqualString('alpha', 'alpha'), true);
+curl -s -X POST localhost:8001/attack -H 'Content-Type: application/json' \
+  -d '{"originalClass":"airplane","noiseLevel":0.05,"method":"fgsm"}'
+curl -s -X POST localhost:8001/attack -H 'Content-Type: application/json' \
+  -d '{"originalClass":"airplane","noiseLevel":0.05,"method":"pgd"}'
+curl -s -X POST localhost:8001/attack -H 'Content-Type: application/json' \
+  -d '{"originalClass":"airplane","targetClass":"bird","targeted":true,
+       "noiseLevel":0.05,"method":"fgsm"}'
 \end{minted}

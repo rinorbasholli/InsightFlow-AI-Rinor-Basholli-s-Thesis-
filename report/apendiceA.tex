@@ -1,23 +1,23 @@
 \chapter{Declaration on the use of generative AI}
 \label{app:ai}
 
-This appendix is the declaration I will defend.
+This appendix declares every use of generative AI in this project, both as a component of the laboratory and as a tool in producing the software and this report. The use of AI tools in the report is permitted by the rules of the programme, provided that it is declared.
 
-\section{Declaration}
-\label{sec:ai-decl}
+\section{Generative AI as a component of the laboratory}
+\label{sec:ai-component}
 
-I used generative AI in this project.
+The laboratory calls the Gemini API~\cite{geminiapi} on three routes: phishing generation (\path{/api/generate-phishing}), email analysis (\path{/api/analyze-email}) and the narration of non-preset deepfake scenarios (\path{/api/analyze-media-deepfake}). Every response from these routes carries a \texttt{source} field that states whether Gemini, a deterministic fallback or a stored preset produced it. The default model identifier is \texttt{gemini-3.5-flash}, configurable through the environment variable \texttt{GEMINI\_MODEL}; the recorded calls in \path{eval/gemini_runs/} were served by that identifier. Gemini is not used on the adversarial route and does not produce any number reported in Chapter~\ref{cha:eval}.
+
+\section{Generative AI as a tool in producing this work}
+\label{sec:ai-tools}
 
 \begin{itemize}
-\item Gemini is used on the teaching email routes \texttt{/api/generate-phishing} and \texttt{/api/analyze-email}, and on non-preset deepfake filenames. Each of those answers carries \texttt{source} equal to \texttt{gemini}, \texttt{fallback}, or \texttt{preset}.
-\item The adversarial route does not use Gemini. When the Python service is down, the answer is 503, not an invented confidence.
-\item The official report is this \LaTeX\ tree under \texttt{report/}, using BibTeX \texttt{ieeetr} as the template requires.
-\item I implemented the lock, the tests, and the evaluation wiring. Every number must be checked by me, Rinor Basholli.
+\item \textbf{Claude (Anthropic)} was used during the final revision of the project. It reviewed the code and the evaluation scripts for errors, proposed the changes to the phishing benchmark (separate wording-only and with-sender models, cross-validation and a trivial baseline), to the attack service (shared pixel-space attack, verified $L_\infty$ bound) and to the request handling (client address, prompt handling), verified the bibliographic references against their sources, searched for additional literature, and drafted the text of Chapters~\ref{cha:intro}--\ref{cha:conc}, the abstract and these appendices from the code, the result files and the decisions of the author.
+\item \textbf{Cursor} (an AI-assisted code editor) was used to write and modify parts of the application code.
+\item \todo{Add any other AI tool used during development (for example the tool used to create the first version of the application), with what it was used for.}
 \end{itemize}
 
-The work could not exist in this form without my decisions: the requirements, the source labels, the refusal to harvest mail, the CIFAR model choice, and the honesty about the first F1 $= 1.0$ run and the sender leak in the $0.756$ run. The same work could have been written without a language model, more slowly, as ordinary React and Python. A model did not sit the course. I did.
+\section{Responsibility of the author}
+\label{sec:ai-author}
 
-\section{Model identifier}
-\label{sec:model-id}
-
-The default Gemini model id in \texttt{server.ts} is \texttt{gemini-3.5-flash}. The environment variable \texttt{GEMINI\_MODEL} overrides it. I must say in the viva which id the live key served.
+The author defined the problem, the scope, the requirements and the design decisions described in this report, including the provenance contract, the exclusion of media processing and mail sending, the choice of the CIFAR-10 model and the security controls. The author ran the evaluation scripts that produced the result files, checked every number in Chapter~\ref{cha:eval} against those files, and reviewed and corrected all AI-drafted text. AI tools did not produce any result reported in this document: all results come from the scripts in the repository and can be regenerated as described in Appendix~\ref{app:eval}.

@@ -160,10 +160,16 @@ export function requireLabAccess(
     return;
   }
 
+  const ip = clientIp(req);
+  if (authLockedOut(ip)) {
+    res.status(429).type('text/plain').send('Too many failed sign-in attempts. Try again later.');
+    return;
+  }
   const sep = decoded.indexOf(':');
   const user = sep === -1 ? decoded : decoded.slice(0, sep);
   const pass = sep === -1 ? '' : decoded.slice(sep + 1);
   if (!timingSafeEqualString(user, creds.user) || !timingSafeEqualString(pass, creds.pass)) {
+    recordAuthFailure(ip);
     res.setHeader('WWW-Authenticate', 'Basic realm="InsightFlow AI academic laboratory", charset="UTF-8"');
     res.status(401).type('text/plain').send('Authentication required.');
     return;
@@ -174,12 +180,15 @@ export function requireLabAccess(
 
 const apiHits = new Map<string, number[]>();
 
+/**
+ * Client address for rate limiting. Uses req.ip, which Express derives from
+ * X-Forwarded-For only up to the number of trusted proxy hops configured with
+ * `app.set('trust proxy', 1)` in server.ts. The raw header is not read here,
+ * because its first value is chosen by the client and could be rotated to
+ * bypass the hourly limit.
+ */
 export function clientIp(req: express.Request): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.trim()) {
-    return forwarded.split(',')[0].trim();
-  }
-  return req.ip || req.socket.remoteAddress || 'unknown';
+  return req.ip || req.socket?.remoteAddress || 'unknown';
 }
 
 export function rateLimitApi(
@@ -220,4 +229,31 @@ export function promptLooksInjected(text: string): boolean {
   const t = (text || '').trim();
   if (!t) return false;
   return INJECTION_PATTERNS.some((re) => re.test(t));
+}
+
+/** Failed sign-in attempts allowed per client address within AUTH_FAILURE_WINDOW_MS. */
+export const AUTH_FAILURE_LIMIT = 10;
+export const AUTH_FAILURE_WINDOW_MS = 15 * 60 * 1000;
+const authFailures = new Map<string, number[]>();
+
+function recentAuthFailures(ip: string): number[] {
+  const since = Date.now() - AUTH_FAILURE_WINDOW_MS;
+  const recent = (authFailures.get(ip) || []).filter((t) => t > since);
+  authFailures.set(ip, recent);
+  return recent;
+}
+
+export function authLockedOut(ip: string): boolean {
+  return recentAuthFailures(ip).length >= AUTH_FAILURE_LIMIT;
+}
+
+export function recordAuthFailure(ip: string): void {
+  const recent = recentAuthFailures(ip);
+  recent.push(Date.now());
+  authFailures.set(ip, recent);
+}
+
+/** Test helper: clears all recorded failures. */
+export function resetAuthFailures(): void {
+  authFailures.clear();
 }

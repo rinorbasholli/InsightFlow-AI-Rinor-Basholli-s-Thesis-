@@ -1,86 +1,132 @@
-\chapter{Architecture}
+\chapter{Architecture and design}
 \label{cha:arch}
 
-This chapter describes how I organised the system after I had a working React laboratory and added a real evaluation path. I justified each split by what I needed to demonstrate, not by a catalogue of patterns.
+This chapter presents the design that realises the requirements of Chapter~\ref{cha:req}. It describes the component architecture and the reasons for it, the deployment options, the mapping of components to the repository, the data model, the main interaction sequences, the API contracts and the security controls in the request path.
 
-\section{Overall architecture}
+\section{Architecture overview}
 \label{sec:arch-overview}
 
-Figure~\ref{fig:arch} shows the four processes I actually run.
+The laboratory is a client--server system with a separate computation service (Figure~\ref{fig:arch}). A React single-page application runs in the browser and communicates only with an Express server. The server enforces authentication and limits, calls the Gemini API for the language tasks, and forwards attack requests to a Python service built with FastAPI, which holds the pretrained CIFAR-10 model.
 
+% src: server.ts, eval/adversarial/service.py
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
   box/.style={draw, rounded corners, align=center, inner sep=6pt, font=\scriptsize, minimum width=3.1cm, minimum height=1.15cm},
   arr/.style={-{Stealth}, thick}
 ]
-\node[box] (ui) at (0,0) {React UI\\Vite + four tabs};
-\node[box] (ex) at (5.1,0) {Express\\ \texttt{server.ts}};
+\node[box] (ui) at (0,0) {React client\\dashboard + three labs};
+\node[box] (ex) at (5.1,0) {Express server\\ \texttt{server.ts}, \texttt{labSecurity.ts}};
 \node[box] (gem) at (5.1,2.3) {Gemini API\\ \texttt{gemini-3.5-flash}};
-\node[box] (py) at (10.2,0) {Python eval\\FastAPI :8001};
-\node[box] (m) at (10.2,-2.3) {CIFAR-10\\ResNet-56 weights};
-\draw[arr] (ui) -- node[above, font=\scriptsize] {cookie / Basic + JSON} (ex);
-\draw[arr] (ex) -- node[right, font=\scriptsize] {email / deepfake} (gem);
+\node[box] (py) at (10.2,0) {Attack service\\FastAPI, port 8001};
+\node[box] (m) at (10.2,-2.3) {CIFAR-10 test set\\ResNet-56 weights};
+\draw[arr] (ui) -- node[above, font=\scriptsize] {HTTP, cookie + JSON} (ex);
+\draw[arr] (ex) -- node[right, font=\scriptsize] {email, deepfake prompts} (gem);
 \draw[arr] (ex) -- node[above, font=\scriptsize] {\texttt{/attack}, \texttt{/health}} (py);
 \draw[arr] (py) -- (m);
 \end{tikzpicture}
-\caption{Processes I used: the browser talks only to Express. Express talks to Gemini for teaching routes and to the Python service for real attacks.}
+\caption{Component architecture. The browser communicates only with the Express server, which calls Gemini for language tasks and the attack service for adversarial computation.}
 \label{fig:arch}
 \end{figure}
 
-I chose this split for a simple reason. The first application already had a React user interface and Express routes. Rewriting it as a notebook would have removed the laboratory that the examiners will click. Putting PyTorch inside Node would have been fragile. A second process on port 8001 lets me start or stop the attack service without taking the website down.
+Three alternatives were considered. A notebook-based design (one notebook per risk) would have been simpler to build, but would not provide an authenticated, shared application in which the three risks appear in one workflow, which is the gap identified in Section~\ref{sec:gap}. Running the attacks inside the Node.js process was rejected because PyTorch and the pretrained models are native to Python, and because coupling a heavy, slow computation to the web server would make the whole site unavailable whenever the model is loading or the computation fails. Calling the LLM directly from the browser was rejected because it would expose the API key and bypass the server-side limits. The chosen split isolates each concern: the web server can run without the attack service, and the attack service can be restarted without taking the website down (NFR8).
 
-I run the Node application locally with \texttt{npm run dev} at \texttt{http://localhost:3000}. The real attack needs the Python service on port 8001.
+\section{Deployment}
+\label{sec:deploy}
 
-\section{Client screens}
-\label{sec:screens}
+The repository supports two deployment configurations. In development, \texttt{npm run dev} starts Express with the Vite middleware on port 3000, and the attack service is started separately on port 8001. For production, a container image is built from \texttt{Dockerfile}: it compiles the client with Vite, bundles the server with esbuild, and runs \texttt{node dist/server.cjs} with \texttt{NODE\_ENV=production} on port 8080 (NFR10). A second image, \path{deploy/Dockerfile.all-in-one}, adds Python 3.12 and PyTorch and starts both processes in one container, so that the adversarial module is available in a single deployment. The script \path{deploy/start-live-lab.sh} reproduces this configuration locally and refuses to start when the access credentials are missing.
 
-\texttt{App.tsx} keeps one \texttt{activeScreen} value: dashboard, phishing, deepfake, or adversarial. I chose a sidebar instead of separate deployments because the point of the project is one workflow.
+Sessions and rate-limit counters are kept in process memory (Section~\ref{sec:arch-sec}). The design therefore assumes a \emph{single instance} of the server. If a hosting platform runs several instances behind a load balancer, each instance holds its own sessions and counters, so a user may be asked to sign in again and the effective rate limit is multiplied by the number of instances. Section~\ref{sec:limits-disc} lists this as a limitation.
 
-The dashboard reads \texttt{phishingHistory}. It does not call the Python service. The phishing lab calls \texttt{/api/generate-phishing} and \texttt{/api/analyze-email}. The deepfake lab calls \texttt{/api/analyze-media-deepfake}. The attack lab calls \texttt{/api/adversarial-perturb}.
+\section{Components and repository structure}
+\label{sec:components}
 
-Figures~\ref{fig:ui-login}--\ref{fig:ui-adv} are captures of \texttt{http://localhost:3000} from this repository.
+Table~\ref{tab:components} maps the components to the repository.
 
+\begin{table}[htbp]
+\centering
+\caption{Components and their location in the repository.}
+\label{tab:components}
+\scriptsize
+\begin{tabular}{p{3.4cm}p{4.0cm}p{5.0cm}}
+\toprule
+Component & Location & Responsibility \\
+\midrule
+Client shell & \path{src/App.tsx}, \path{src/LoginScreen.tsx} & Session check, navigation between the four screens, sign-out \\
+Dashboard & \path{src/components/UnifiedAnalysisDashboard.tsx} & Aggregates over the session's email list \\
+Phishing laboratory & \path{src/components/PhishingForensicsLab.tsx}, \path{src/academicDataset.ts} & Exemplars, generator, analyser, file parser, seeded teaching set \\
+Deepfake laboratory & \path{src/components/DeepfakeMediaStudio.tsx} & Scenario input, presets, display of markers and defences \\
+Adversarial laboratory & \path{src/components/AdversarialAttackSimulator.tsx} & Class, method and budget selection; display of computed results \\
+Server and routes & \texttt{server.ts} & Route handlers, Gemini calls, fallbacks, presets, proxy to the attack service \\
+Security middleware & \texttt{labSecurity.ts} & Authentication, sessions, rate limiting, injection check, body limit \\
+Attack service & \path{eval/adversarial/service.py} & Live single-image attacks \\
+Attack implementation and batch & \path{eval/adversarial/run_attacks.py} & Shared FGSM/PGD code, 200-image evaluation \\
+Phishing benchmark & \path{eval/phishing/run_benchmark.py} & Corpus generation, classifier, metrics \\
+Tests & \path{tests/} & Unit and contract tests \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Data model}
+\label{sec:data-model}
+
+The laboratory has no database. Runtime state lives in the browser, and the evaluation results are files written by the scripts.
+
+\paragraph{Client state.} The application keeps the active screen, the most recent analysis and the list of analysed emails in React state (Figure~\ref{fig:data}). Each email record carries its scores together with two provenance fields: \texttt{analysisSource} records whether the scores come from the seeded dataset, from Gemini or from the fallback, and \texttt{labelOrigin} records where the class label came from. Clearing the dashboard empties the list; reloading the page discards it.
+
+% src: src/academicDataset.ts:16-34, src/App.tsx:21-27
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.92\textwidth]{images/ui-login}
-\caption{Login screen. The laboratory does not show the username or password on the page.}
-\label{fig:ui-login}
+\begin{tikzpicture}[
+  card/.style={draw, rectangle, align=left, font=\scriptsize, inner sep=6pt}
+]
+\node[card] (a) {
+\textbf{Application state (React \texttt{useState})}\\[2pt]
+activeScreen: dashboard $|$ phishing $|$ deepfake $|$ adversarial\\
+lastPhishingAnalysis: object or null\\
+phishingHistory: AnalyzedSample[\,]\\[4pt]
+\textbf{AnalyzedSample}\\[2pt]
+id, sender, recipient, subject, body\\
+category: legitimate $|$ conventional\_phishing $|$ ai\_phishing\\
+tag, realismScore, detectabilityScore, languagePolish\\
+urgencyLevel, detectionDifficulty\\
+indicators[\,], mitigationRules[\,], detailedAnalysis\\
+analysisSource: dataset $|$ gemini $|$ fallback\\
+labelOrigin: dataset $|$ known-sample $|$ llm $|$ fallback
+};
+\end{tikzpicture}
+\caption{Client data model.}
+\label{fig:data}
 \end{figure}
 
-\begin{figure}[htbp]
+\paragraph{Evaluation artefacts.} The results reported in Chapter~\ref{cha:eval} are files, summarised in Table~\ref{tab:artefacts}. Each file records \texttt{source: computed}; the adversarial file also records the generation time, the PyTorch version and the Git commit of the code that produced it.
+
+\begin{table}[htbp]
 \centering
-\includegraphics[width=0.92\textwidth]{images/ui-dashboard}
-\caption{Dashboard. The 75\% / 51\% style bands are configuration, not findings. Session state is in memory.}
-\label{fig:ui-dash}
-\end{figure}
+\caption{Evaluation artefacts and their main fields.}
+\label{tab:artefacts}
+\scriptsize
+\begin{tabular}{p{5.0cm}p{7.4cm}}
+\toprule
+File & Main fields \\
+\midrule
+\path{eval/phishing/corpus.jsonl} & One email per line: \texttt{id}, \texttt{sender}, \texttt{subject}, \texttt{body}, \texttt{label} (ham/phish), \texttt{source} (pattern family) \\
+\path{eval/phishing/results/phishing_metrics.json} & Counts, seed, model description; hold-out and 5-fold metrics for three models; confusion matrices \\
+\path{eval/phishing/results/predictions.csv} & Hold-out predictions of the wording-only model: \texttt{id}, label, prediction, probability \\
+\path{eval/phishing/results/MANUAL_REVIEW.csv} & Twenty rows with a manual agreement flag \\
+\path{eval/adversarial/results/adversarial_metrics.json} & Model, $n$, seed, timestamp, commit, clean accuracy; per $\varepsilon$: robust accuracy with 95\% interval, attack success rate, flip rate, mean and maximum $L_\infty$ \\
+\path{eval/adversarial/results/live_*.json} & Recorded single-image responses of the attack service \\
+\path{eval/gemini_runs/*.json} & Recorded Gemini responses of the three language routes \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.92\textwidth]{images/ui-phishing}
-\caption{AI Phishing Lab: authored exemplars and educational reconstructions.}
-\label{fig:ui-phish}
-\end{figure}
+\section{Interaction sequences}
+\label{sec:sequences}
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.92\textwidth]{images/ui-deepfake}
-\caption{Deepfake tab. Filename presets return hardcoded JSON. Bytes are not inspected.}
-\label{fig:ui-df}
-\end{figure}
+Figure~\ref{fig:seq-phish} shows the generation sequence. Validation happens before any external call, so a rejected prompt never reaches Gemini, and a Gemini failure still produces a labelled answer.
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.92\textwidth]{images/ui-adversarial}
-\caption{Attack tab. FGSM/PGD on CIFAR-10 ResNet-56. Confidences are \texttt{source: computed}.}
-\label{fig:ui-adv}
-\end{figure}
-
-\section{Sequence: generate phishing}
-\label{sec:seq-phish}
-
-Figure~\ref{fig:seq-phish} is the generate path.
-
+% src: server.ts (POST /api/generate-phishing)
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
@@ -95,39 +141,22 @@ Figure~\ref{fig:seq-phish} is the generate path.
 \draw (4.0,-0.3) -- (4.0,-5.4);
 \draw (8.0,-0.3) -- (8.0,-5.4);
 \draw[arr] (0,-0.8) -- node[above] {POST /api/generate-phishing} (4.0,-0.8);
-\draw[arr] (4.0,-1.5) -- node[above] {injection / rate limit} (0,-1.5);
-\node at (2.0,-1.9) {400 or 429 if rejected};
-\draw[arr] (4.0,-2.5) -- node[above] {generateContent} (8.0,-2.5);
-\draw[arr] (8.0,-3.3) -- node[above] {JSON email} (4.0,-3.3);
+\draw[arr] (4.0,-1.5) -- node[above] {auth, rate limit, injection check} (0,-1.5);
+\node at (2.0,-1.9) {401, 429 or 400 if rejected};
+\draw[arr] (4.0,-2.5) -- node[above] {generateContent (JSON schema)} (8.0,-2.5);
+\draw[arr] (8.0,-3.3) -- node[above] {email JSON} (4.0,-3.3);
 \draw[arr] (4.0,-4.1) -- node[above] {source=gemini} (0,-4.1);
 \draw[arr] (4.0,-4.9) -- node[above] {on error: source=fallback} (0,-4.9);
 \end{tikzpicture}
-\caption{Generate-phishing sequence. A rejected prompt never reaches Gemini. A Gemini failure still returns a template.}
+\caption{Phishing-generation sequence.}
 \label{fig:seq-phish}
 \end{figure}
 
-I kept the fallback because a viva demonstration should not die on a 503 from the model API. The source field is what stops that fallback from looking like a model measurement.
+The email-analysis sequence has the same shape, with one difference in prompt construction: the email is treated as untrusted third-party data. The server encloses it between explicit markers and instructs the model not to follow instructions found inside it (Section~\ref{sec:limits}). The deepfake sequence adds a branch before the external call: if the filename equals one of the three presets, the server returns the stored analysis with \texttt{source=preset} and Gemini is not called.
 
-The analyse-email sequence is the same shape. The request body is \texttt{subject}, \texttt{body}, and optional \texttt{sender}. The success payload is \texttt{analysis} plus \texttt{source}.
+Figure~\ref{fig:seq-adv} shows the adversarial sequence. It is the only path whose numbers are computed by a model, and it has no fallback: if the attack service cannot be reached, the server answers with HTTP~503.
 
-\section{Sequence: deepfake scenario}
-\label{sec:seq-df}
-
-I implemented a branch before Gemini.
-
-\begin{enumerate}
-\item The browser posts \texttt{fileName}, \texttt{mediaType}, and \texttt{promptAnalysis}.
-\item Express lowercases the filename. If it equals \texttt{ceo\_keynote\_urgent\_wire.mp4}, \texttt{financial\_analyst\_voicemail.wav}, or \texttt{id\_verification\_passport.png}, it returns the matching object from \texttt{PRE\_BAKED\_DEEPFAKES} with \texttt{source: "preset"}.
-\item Otherwise it calls Gemini. On success the source is \texttt{gemini}. On error the source is \texttt{fallback} and \texttt{getDynamicFallbackDeepfake} builds a story from the filename and the word ``urgent''.
-\end{enumerate}
-
-No step reads an uploaded byte stream. I chose filename matching because it is deterministic for the three viva presets and because I did not have a licensed detector I could defend.
-
-\section{Sequence: adversarial attack}
-\label{sec:seq-adv}
-
-Figure~\ref{fig:seq-adv} is the only path that I treat as computed.
-
+% src: server.ts (POST /api/adversarial-perturb), eval/adversarial/service.py (POST /attack)
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
@@ -137,85 +166,57 @@ Figure~\ref{fig:seq-adv} is the only path that I treat as computed.
 ]
 \node[obj] (c) at (0,0) {Browser};
 \node[obj] (s) at (3.7,0) {Express};
-\node[obj] (p) at (7.6,0) {FastAPI};
+\node[obj] (p) at (7.6,0) {Attack service};
 \node[obj] (m) at (11.0,0) {ResNet-56};
 \draw (0,-0.3) -- (0,-5.0);
 \draw (3.7,-0.3) -- (3.7,-5.0);
 \draw (7.6,-0.3) -- (7.6,-5.0);
 \draw (11.0,-0.3) -- (11.0,-5.0);
 \draw[arr] (0,-0.9) -- node[above] {POST /api/adversarial-perturb} (3.7,-0.9);
-\draw[arr] (3.7,-1.8) -- node[above] {POST /attack + token} (7.6,-1.8);
-\draw[arr] (7.6,-2.7) -- node[above] {forward + FGSM/PGD} (11.0,-2.7);
+\draw[arr] (3.7,-1.8) -- node[above] {POST /attack (+ token)} (7.6,-1.8);
+\draw[arr] (7.6,-2.7) -- node[above] {forward, gradient, FGSM/PGD} (11.0,-2.7);
 \draw[arr] (11.0,-3.5) -- node[above] {softmax} (7.6,-3.5);
-\draw[arr] (7.6,-4.3) -- node[above] {source=computed or 503} (0,-4.3);
+\draw[arr] (7.6,-4.3) -- node[above] {source=computed, or 503 if unreachable} (0,-4.3);
 \end{tikzpicture}
-\caption{Adversarial sequence. If FastAPI is down, Express returns 503. Gemini is not called.}
+\caption{Adversarial-attack sequence.}
 \label{fig:seq-adv}
 \end{figure}
-
-There is no Gemini or hardcoded confidence fallback on this route. A missing eval service returns 503.
-
-\section{Data model}
-\label{sec:data-model}
-
-There is no database. I stored laboratory state in React \texttt{useState} hooks. Figure~\ref{fig:data} lists the fields.
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-  card/.style={draw, rectangle, align=left, font=\scriptsize, inner sep=6pt}
-]
-\node[card] (a) {
-\textbf{App state (useState only)}\\[2pt]
-activeScreen: dashboard $|$ phishing $|$ deepfake $|$ adversarial\\
-lastPhishingAnalysis: object or null\\
-phishingHistory: AnalyzedSample[\,]\\[4pt]
-\textbf{AnalyzedSample}\\[2pt]
-id, sender, recipient, subject, body\\
-category: legitimate $|$ conventional\_phishing $|$ ai\_phishing\\
-tag, realismScore, detectabilityScore, languagePolish\\
-urgencyLevel, detectionDifficulty\\
-indicators[], mitigationRules[], detailedAnalysis\\
-analysisSource?: dataset $|$ gemini $|$ fallback\\
-labelOrigin?: dataset $|$ known-sample $|$ llm $|$ fallback
-};
-\end{tikzpicture}
-\caption{Client data model. Clearing the dataset only empties the React array.}
-\label{fig:data}
-\end{figure}
-
-I chose client state because the 90 rows are generated in the browser from a seed. A database would have implied persistence that I do not have. The footer says the session is in memory. There is no PostgreSQL or SQLite.
-
-The Python side keeps CIFAR-10 on disk under \texttt{eval/adversarial/results/cifar10/} after the first download. That cache is local data for the model, not a user database.
 
 \section{API contracts}
 \label{sec:api}
 
-All JSON bodies are limited to 32\,kB. POST routes under \texttt{/api/} are rate limited. Table~\ref{tab:api} is the contract I implemented.
+Table~\ref{tab:api} specifies the HTTP interface. All routes except \texttt{POST /api/login} and \texttt{POST /api/logout} require a valid session cookie or HTTP Basic credentials and otherwise return HTTP~401. All \texttt{POST /api/} routes are rate limited (HTTP~429) and limited to 32\,kB of JSON (HTTP~413).
 
 \begin{table}[htbp]
 \centering
-\caption{HTTP contracts for the four POST routes and the evaluation health route.}
+\caption{HTTP API of the Express server.}
 \label{tab:api}
 \scriptsize
-\begin{tabular}{p{3.4cm}p{4.2cm}p{4.6cm}}
+\begin{tabular}{p{3.6cm}p{3.6cm}p{5.2cm}}
 \toprule
-Route & Request body & Success / error \\
+Route & Request & Response \\
 \midrule
-\texttt{POST /api/generate-phishing} & \texttt{scenario}, \texttt{promptText}, \texttt{customPrompt}, \texttt{complexity} & \texttt{\{success, source, email\}} with subject, body, realismScore, spoofingIndicators, mitigationRules. 400 if injected. 429 if limited. \\
-\texttt{POST /api/analyze-email} & \texttt{subject}, \texttt{body}, \texttt{sender} & \texttt{\{success, source, analysis\}} with scores, predictedCategory, categoryRationale, indicators, mitigationRules, detailedAnalysis. \\
-\texttt{POST /api/analyze-media-deepfake} & \texttt{fileName}, \texttt{mediaType}, \texttt{promptAnalysis} & \texttt{\{success, source, deepfakeAnalysis\}} with facialIrregularities, audioAnomalies, simulatedClassification, markers, actionableDefences. \\
-\texttt{POST /api/adversarial-perturb} & \texttt{originalClass}, \texttt{targetClass}, \texttt{noiseLevel}, \texttt{architecture} & \texttt{\{success, source: computed, perturbation\}} or 502/503. No Gemini fallback. \\
-\texttt{GET /api/eval/health} & none & Forwards Python \texttt{/health}. 503 if the service is down. \\
+\texttt{POST /api/login} & \texttt{username}, \texttt{password} & 200 and session cookie; 401 on mismatch \\
+\texttt{POST /api/logout} & --- & 200; cookie cleared \\
+\texttt{GET /api/whoami} & --- & Current user \\
+\texttt{POST /api/generate-phishing} & \texttt{scenario}, \texttt{promptText}, \texttt{customPrompt}, \texttt{complexity} & \texttt{\{success, source, email\}}; 400 if the prompt is rejected \\
+\texttt{POST /api/analyze-email} & \texttt{subject}, \texttt{body}, \texttt{sender} & \texttt{\{success, source, analysis\}} with scores, indicators, mitigations, \texttt{predictedCategory}, \texttt{categoryRationale} \\
+\texttt{POST /api/analyze-media-deepfake} & \texttt{fileName}, \texttt{mediaType}, \texttt{promptAnalysis} & \texttt{\{success, source, deepfakeAnalysis\}}; 400 if the prompt is rejected \\
+\texttt{POST /api/adversarial-perturb} & \texttt{originalClass}, \texttt{targetClass}, \texttt{noiseLevel}, \texttt{method}, \texttt{targeted} & \texttt{\{success, source: computed, perturbation\}}; 502 if the service rejects the request; 503 if it is unreachable \\
+\texttt{GET /api/eval/health} & --- & Health of the attack service; 503 if unreachable \\
+\texttt{GET /api/eval/adversarial} & --- & Adversarial metric file; 404 if absent \\
+\texttt{GET /api/eval/phishing} & --- & Phishing metric file; 404 if absent \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-I also added two GET helpers that only send a file if it exists: \texttt{/api/eval/phishing} and \texttt{/api/eval/adversarial}. They are not extra attack surfaces in the teaching sense. They just expose the JSON I need for Chapter~\ref{cha:eval}.
-
-The Python \texttt{POST /attack} body is the same class pair plus \texttt{method} (default \texttt{fgsm}). If \texttt{EVAL\_INTERNAL\_TOKEN} is set, Express sends it as \texttt{X-Eval-Token}.
+The attack service exposes \texttt{GET /health}, \texttt{GET /summary} and \texttt{POST /attack}. When the environment variable \texttt{EVAL\_INTERNAL\_TOKEN} is set, the service requires it in the \texttt{X-Eval-Token} header and the Express server forwards it, so that the service cannot be called directly by other hosts.
 
 \section{Security controls in the request path}
 \label{sec:arch-sec}
 
-I placed three Express middleware checks in front of the routes: JSON size, \texttt{requireLabAccess}, and \texttt{rateLimitApi}. The generate-phishing handler then calls \texttt{promptLooksInjected} on the custom prompt and the prompt text. Chapter~\ref{cha:disc} maps those controls to STRIDE.
+Every request passes three middleware functions before reaching a route: the JSON body limit, \texttt{requireLabAccess} and \texttt{rateLimitApi}. \texttt{requireLabAccess} fails closed: in production, if either credential is missing, every request receives HTTP~503. Static assets and the login page are public so that the login form can render; every API route except login and logout is protected. Rate-limit counters are keyed by client address and path, where the client address is taken from Express's \texttt{req.ip}, which honours exactly one trusted proxy hop. The language routes add prompt-level controls described in Section~\ref{sec:limits}. Section~\ref{sec:stride} relates these controls to the STRIDE threat categories.
+
+\section{Summary}
+
+The architecture separates presentation, policy enforcement, language tasks and numerical computation into components that can fail independently. The next chapter describes how each component was implemented.

@@ -62,3 +62,8 @@ python3 eval/adversarial/service.py
 ```
 
 Express proxies `/api/adversarial-perturb` to `EVAL_API_URL` (default `http://127.0.0.1:8001`). If that process is down, the route returns 503.
+
+## Use of generative AI
+
+- **In the application:** the teaching email routes and non-preset deepfake scenarios call the Gemini API (`gemini-3.5-flash` by default). Every analytical response carries `source` (`gemini`, `fallback`, `preset` or `computed`). Gemini is never used for adversarial results.
+- **In producing the work:** Cursor (AI-assisted editor) was used to write and modify parts of the code. Claude (Anthropic) was used to review the code and evaluation scripts, propose fixes, verify references, and draft the text of the report from the code, the result files and the author's decisions. All results come from the scripts in `eval/` and were checked by the author. See Appendix A of the report for the full declaration.

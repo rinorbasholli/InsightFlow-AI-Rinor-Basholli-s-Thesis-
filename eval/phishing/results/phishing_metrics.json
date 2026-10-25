@@ -53,6 +53,81 @@
       }
     }
   },
+  "cv_5fold_grouped_by_sender_domain": {
+    "note": "StratifiedGroupKFold(5): no sender domain is shared between training and test folds.",
+    "n_domains": 33,
+    "wording_only": {
+      "accuracy": {
+        "mean": 0.570021828765462,
+        "std": 0.08366860463395387
+      },
+      "precision": {
+        "mean": 0.6045875831485589,
+        "std": 0.11368223927159295
+      },
+      "recall": {
+        "mean": 0.8711412770236299,
+        "std": 0.13584727101942876
+      },
+      "f1": {
+        "mean": 0.6990893750029963,
+        "std": 0.06002502824546948
+      },
+      "roc_auc": {
+        "mean": 0.6022376986469058,
+        "std": 0.12468677323654419
+      }
+    },
+    "with_sender": {
+      "accuracy": {
+        "mean": 0.6356631616993147,
+        "std": 0.05555985716289867
+      },
+      "precision": {
+        "mean": 0.6321734417878779,
+        "std": 0.06308866338557313
+      },
+      "recall": {
+        "mean": 0.917094017094017,
+        "std": 0.10197838453521131
+      },
+      "f1": {
+        "mean": 0.7427505109050021,
+        "std": 0.04551237672722531
+      },
+      "roc_auc": {
+        "mean": 0.7840907021191598,
+        "std": 0.12609676272485354
+      }
+    },
+    "baseline_all_phish": {
+      "accuracy": {
+        "mean": 0.581542566092651,
+        "std": 0.06087541063670317
+      },
+      "precision": {
+        "mean": 0.581542566092651,
+        "std": 0.06087541063670317
+      },
+      "recall": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "f1": {
+        "mean": 0.7335643017252826,
+        "std": 0.048037849017378266
+      },
+      "roc_auc": {
+        "mean": 0.5,
+        "std": 0.0
+      }
+    }
+  },
+  "provenance": {
+    "git_commit": "unknown",
+    "python_version": "3.13.17",
+    "sklearn_version": "1.9.1"
+  },
   "cv_5fold": {
     "wording_only": {
       "accuracy": {

@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import csv
 import json
+import platform
+import subprocess
 from pathlib import Path
 
 from sklearn.dummy import DummyClassifier
@@ -27,7 +29,7 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
-from sklearn.model_selection import StratifiedKFold, cross_validate, train_test_split
+from sklearn.model_selection import StratifiedGroupKFold, StratifiedKFold, cross_validate, train_test_split
 from sklearn.pipeline import Pipeline
 
 SEED = 20260927
@@ -1382,16 +1384,16 @@ def build_corpus() -> list[dict]:
         else:
             ai_n += 1
             rid = f"ai-{ai_n}"
-            rows.append(
-                {
+        rows.append(
+            {
                 "id": rid,
-                    "sender": sender,
+                "sender": sender,
                 "subject": subject,
-                    "body": body,
+                "body": body,
                 "label": label,
                 "source": source,
-                }
-            )
+            }
+        )
     return rows
 
 
@@ -1486,12 +1488,50 @@ def cross_val(texts, y, model):
     }
 
 
+def sender_domain(row):
+    return row["sender"].split("@")[-1].strip().lower()
+
+
+def cross_val_by_domain(texts, y, groups, model):
+    """5-fold CV in which no sender domain appears in both the training and the test fold."""
+    res = cross_validate(
+        model,
+        texts,
+        y,
+        groups=groups,
+        cv=StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=SEED),
+        scoring=["accuracy", "precision", "recall", "f1", "roc_auc"],
+    )
+    return {
+        k[len("test_"):]: {"mean": float(v.mean()), "std": float(v.std())}
+        for k, v in res.items()
+        if k.startswith("test_")
+    }
+
+
+def provenance():
+    import sklearn
+
+    try:
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"], cwd=str(HERE), text=True
+        ).strip()
+    except Exception:
+        commit = "unknown"
+    return {
+        "git_commit": commit,
+        "python_version": platform.python_version(),
+        "sklearn_version": sklearn.__version__,
+    }
+
+
 def main():
     rows = build_corpus()
     (HERE / "corpus.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")
     y = [0 if r["label"] == "ham" else 1 for r in rows]
     wording = make_texts(rows, with_sender=False)
     with_sender = make_texts(rows, with_sender=True)
+    groups = [sender_domain(r) for r in rows]
 
     wording_holdout, (i_te, y_te, pred, proba) = holdout(wording, y, make_lr())
     sender_holdout, _ = holdout(with_sender, y, make_lr())
@@ -1516,6 +1556,14 @@ def main():
             "with_sender": sender_holdout,
             "baseline_all_phish": base_holdout,
         },
+        "cv_5fold_grouped_by_sender_domain": {
+            "note": "StratifiedGroupKFold(5): no sender domain is shared between training and test folds.",
+            "n_domains": len(set(groups)),
+            "wording_only": cross_val_by_domain(wording, y, groups, make_lr()),
+            "with_sender": cross_val_by_domain(with_sender, y, groups, make_lr()),
+            "baseline_all_phish": cross_val_by_domain(wording, y, groups, make_baseline()),
+        },
+        "provenance": provenance(),
         "cv_5fold": {
             "wording_only": cross_val(wording, y, make_lr()),
             "with_sender": cross_val(with_sender, y, make_lr()),
@@ -1538,7 +1586,7 @@ def main():
                 }
             )
     # MANUAL_REVIEW.csv is not rewritten.
-    print(json.dumps({k: metrics[k] for k in ("holdout_70_30", "cv_5fold")}, indent=2))
+    print(json.dumps({k: metrics[k] for k in ("holdout_70_30", "cv_5fold", "cv_5fold_grouped_by_sender_domain")}, indent=2))
     print("wrote", OUT / "phishing_metrics.json")
 
 

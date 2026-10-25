@@ -19,6 +19,8 @@ import {
   sessionTokenFromRequest,
   sessionUser,
   timingSafeEqualString,
+  AUTH_FAILURE_LIMIT,
+  resetAuthFailures,
 } from '../labSecurity';
 
 function restoreEnv(name: string, previous: string | undefined) {
@@ -199,13 +201,13 @@ function mockRes(): Response & { statusCode: number; body: unknown; headersSent:
   };
 }
 
-test('clientIp prefers the first X-Forwarded-For hop', () => {
+test('clientIp ignores a client-supplied X-Forwarded-For value and uses req.ip', () => {
   const req = mockReq({
     forwarded: '203.0.113.10, 10.0.0.1',
     ip: '127.0.0.1',
     remoteAddress: '127.0.0.1',
   });
-  assert.equal(clientIp(req), '203.0.113.10');
+  assert.equal(clientIp(req), '127.0.0.1');
 });
 
 test('clientIp falls back to req.ip then socket then unknown', () => {
@@ -500,5 +502,63 @@ test('GET / is public so the login page can render', () => {
   } finally {
     restoreEnv('LAB_BASIC_USER', prevU);
     restoreEnv('LAB_BASIC_PASS', prevP);
+  }
+});
+
+test('session cookie is HttpOnly, SameSite=Lax, 12-hour Max-Age, Secure only when requested', () => {
+  const plain = sessionCookieHeader('abc', false);
+  assert.match(plain, /^lab_session=abc;/);
+  assert.match(plain, /HttpOnly/);
+  assert.match(plain, /SameSite=Lax/);
+  assert.match(plain, /Max-Age=43200/);
+  assert.doesNotMatch(plain, /Secure/);
+  assert.match(sessionCookieHeader('abc', true), /; Secure$/);
+});
+
+test('sessions expire after 12 hours', () => {
+  const realNow = Date.now;
+  try {
+    const t0 = realNow();
+    Date.now = () => t0;
+    const token = createLabSession('examiner');
+    Date.now = () => t0 + 12 * 60 * 60 * 1000 - 1;
+    assert.equal(sessionUser(token), 'examiner');
+    Date.now = () => t0 + 12 * 60 * 60 * 1000 + 1;
+    assert.equal(sessionUser(token), null);
+  } finally {
+    Date.now = realNow;
+  }
+});
+
+test('repeated failed Basic sign-ins are locked out with 429', () => {
+  const prevUser = process.env.LAB_BASIC_USER;
+  const prevPass = process.env.LAB_BASIC_PASS;
+  process.env.LAB_BASIC_USER = 'lab-examiner';
+  process.env.LAB_BASIC_PASS = 'test-only-password';
+  resetAuthFailures();
+  try {
+    const wrong = `Basic ${Buffer.from('lab-examiner:wrong').toString('base64')}`;
+    const right = `Basic ${Buffer.from('lab-examiner:test-only-password').toString('base64')}`;
+    for (let i = 0; i < AUTH_FAILURE_LIMIT; i++) {
+      const res = mockRes();
+      requireLabAccess(mockReq({ ip: '198.51.100.9', path: '/api/whoami', authorization: wrong }), res, () => {
+        throw new Error('next must not run');
+      });
+      assert.equal(res.statusCode, 401);
+    }
+    const locked = mockRes();
+    requireLabAccess(mockReq({ ip: '198.51.100.9', path: '/api/whoami', authorization: right }), locked, () => {
+      throw new Error('next must not run while locked out');
+    });
+    assert.equal(locked.statusCode, 429);
+    let passed = false;
+    requireLabAccess(mockReq({ ip: '203.0.113.7', path: '/api/whoami', authorization: right }), mockRes(), () => {
+      passed = true;
+    });
+    assert.equal(passed, true, 'other addresses are unaffected');
+  } finally {
+    resetAuthFailures();
+    restoreEnv('LAB_BASIC_USER', prevUser);
+    restoreEnv('LAB_BASIC_PASS', prevPass);
   }
 });

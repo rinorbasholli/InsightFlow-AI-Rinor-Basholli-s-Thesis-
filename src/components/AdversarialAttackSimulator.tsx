@@ -111,9 +111,12 @@ export default function AdversarialAttackSimulator() {
         })
       });
       const data = await resp.json();
-      if (data.success) {
+      if (data.success && data.source === 'computed') {
         setResult(data.perturbation);
         setResultSource('computed');
+      } else if (data.success) {
+        setResultSource(null);
+        setErrorStatus('The attack service answered without source=computed; no values are shown.');
       } else {
         setResultSource(data.source === 'unavailable' ? 'unavailable' : null);
         setErrorStatus(data.error || 'Real attack service is not running.');

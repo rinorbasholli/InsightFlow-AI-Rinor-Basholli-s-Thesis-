@@ -21,7 +21,7 @@ API contracts, requirements, and tests for the teaching laboratory in this repos
 | --- | --- | --- |
 | NFR-1 | JSON request bodies are limited to **32kb**. | `express.json({ limit: '32kb' })` in `server.ts` |
 | NFR-2 | Hourly per-IP per-path rate limits on `POST /api/*`: **10**/hour for `/api/generate-phishing`, **40**/hour for other POST API routes. GET is not limited. | `rateLimitApi` |
-| NFR-3 | Reject obvious prompt-injection strings on phishing generation (`ignore previous/prior/above instructions`, `you are now `, `disregard the system/developer`). Normal phishing-task prompts pass. | `promptLooksInjected` on `POST /api/generate-phishing` only |
+| NFR-3 | Reject obvious prompt-injection strings on phishing generation and deepfake prompts (`ignore previous/prior/above instructions`, `you are now `, `disregard the system/developer`). Normal phishing-task prompts pass. | `promptLooksInjected` on `POST /api/generate-phishing` and `POST /api/analyze-media-deepfake` |
 | NFR-4 | Compare Basic Auth credentials with `crypto.timingSafeEqual`. Empty or length-mismatched secrets fail. | `timingSafeEqualString` |
 | NFR-5 | **Fail-closed in production:** if `LAB_BASIC_USER` or `LAB_BASIC_PASS` is missing and `NODE_ENV === 'production'`, respond **503** and do not serve the lab. Non-production with unset credentials stays open for local development. | `requireLabAccess` |
 | NFR-6 | Do not store secrets in git. Example keys only in `.env.example`. | `.gitignore`, this document |
@@ -89,7 +89,7 @@ All routes below go through `requireLabAccess` and, for `POST /api/*`, `rateLimi
 { "success": false, "error": "Hourly API limit exceeded for this address." }
 ```
 
-Client IP is the first `X-Forwarded-For` hop, else `req.ip`, else the socket address. Counters are `${ip}:${path}` in a process-local map (lost on restart).
+Client IP is Express `req.ip` (trust proxy = 1), else the socket address; a client-supplied `X-Forwarded-For` value is not trusted. Counters are `${ip}:${path}` in a process-local map (lost on restart).
 
 ### `POST /api/generate-phishing`
 
@@ -153,7 +153,7 @@ Static HTML/JS is served so the login page can render. Every `/api/*` route exce
 
 ## Prompt injection
 
-`promptLooksInjected` is a small denylist, not a general jailbreak defence. It is applied only to the generate-phishing user fields. Analyse-email, deepfake, and adversarial routes do not run this helper. Combined with the 32kb cap and Gemini JSON schemas, it is a teaching-lab mitigation, not a security guarantee.
+`promptLooksInjected` is a small denylist, not a general jailbreak defence. It is applied to the user-written prompt fields of generate-phishing and analyze-media-deepfake (400 on match). Analyze-email receives third-party email text, so instead of rejecting it the server wraps the email in `<<<EMAIL>>>` markers and tells the model to treat it as untrusted data. Combined with the 32kb cap and Gemini JSON schemas, these are teaching-lab mitigations, not a security guarantee.
 
 ## Ethics / dual use
 

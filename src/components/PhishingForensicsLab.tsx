@@ -55,7 +55,7 @@ export default function PhishingForensicsLab({ onAnalyzeComplete }: PhishingTest
       });
       const data = await resp.json();
       if (data.success) {
-        setGeneratedResult({ ...data.email, source: data.source || 'fallback' });
+        setGeneratedResult({ ...data.email, source: data.source === 'gemini' ? 'gemini' : 'fallback' });
         setSubjectInput(data.email.subject);
         setBodyInput(data.email.body);
         setSenderInput(data.email.sender || 'ai-generator@insightflow.local');
@@ -80,7 +80,7 @@ export default function PhishingForensicsLab({ onAnalyzeComplete }: PhishingTest
       });
       const data = await resp.json();
       if (data.success) {
-        const source = data.source === 'fallback' ? 'fallback' : 'gemini';
+        const source = data.source === 'gemini' ? 'gemini' : 'fallback';
         setAnalysisSource(source);
         const llmCategory = data.analysis?.predictedCategory as string | undefined;
         const category = knownCategory || llmCategory || 'conventional_phishing';

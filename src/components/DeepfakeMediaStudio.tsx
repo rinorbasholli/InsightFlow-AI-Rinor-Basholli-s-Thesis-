@@ -49,7 +49,7 @@ export default function DeepfakeMediaStudio() {
       const data = await resp.json();
       if (data.success) {
         setAnalysisResult(data.deepfakeAnalysis);
-        setAnalysisSource(data.source === 'preset' || data.source === 'fallback' ? data.source : 'gemini');
+        setAnalysisSource(data.source === 'preset' || data.source === 'gemini' ? data.source : 'fallback');
       } else {
         setErrorStatus(data.error || 'Deepfake analysis verification failed');
       }

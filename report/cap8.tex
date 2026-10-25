@@ -1,33 +1,51 @@
 \chapter{Conclusion and future work}
 \label{cha:conc}
 
+This chapter summarises the work against its objectives, answers the research questions and proposes future work.
+
 \section{Conclusion}
 \label{sec:conc}
 
-I implemented InsightFlow AI as an educational laboratory for three AI cybersecurity risks: AI-generated phishing, deepfake scenarios, and adversarial examples. I did this for the Informatics Engineering project course at ESTiG, under the supervision of Tiago Pedrosa. The official title is the title on the cover.
+This work set out to build a web laboratory that demonstrates three AI-related cybersecurity risks in one workflow while making the provenance of every analytical output explicit. Table~\ref{tab:objectives} relates the outcome to the objectives of Section~\ref{sec:objectives}.
 
-I can now answer the research questions in a limited way.
+\begin{table}[htbp]
+\centering
+\caption{Achievement of the objectives.}
+\label{tab:objectives}
+\scriptsize
+\begin{tabular}{p{0.7cm}p{3.6cm}p{1.4cm}p{6.6cm}}
+\toprule
+ID & Objective & Status & Evidence \\
+\midrule
+O1 & One application with three modules and a dashboard & Met & Chapter~\ref{cha:impl}; Figures~\ref{fig:ui-login}--\ref{fig:ui-adv} \\
+O2 & Provenance label on every analytical response; no LLM substitute for computed results & Met & Contract tests (Section~\ref{sec:eval-tests}); HTTP~503 on the adversarial route \\
+O3 & Real FGSM/PGD on at least 200 images with the four metrics & Met & Table~\ref{tab:adv}; budgets verified on every example \\
+O4 & Reproducible phishing benchmark with a trivial baseline & Met & Tables~\ref{tab:phish-cv} and~\ref{tab:phish}; byte-identical reproduction \\
+O5 & Authentication, limits, injection mitigations, STRIDE, tests & Met, with residual risks & Sections~\ref{sec:limits} and~\ref{sec:stride}; 31 tests \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-RQ1. I generate and analyse teaching emails with Gemini or a fallback, and I keep dataset labels on the 90 seeded rows. The source field is the part that makes the answer usable in a viva. The reconstructed TF-IDF benchmark shows that the sender line, not the wording, is what lifts F1 (0.706 wording-only versus 0.756 with sender on the 70/30 split; always-phish 0.733). I read that as a small teaching corpus, not as a mailbox detector.
+\section{Answers to the research questions}
+\label{sec:rq-answers}
 
-RQ2. I teach deepfake talking points with three filename presets and a narrated fallback. I do not inspect bytes. That is an honest teaching tab, not a forensics tool.
+\paragraph{RQ1.} On the reconstructed corpus, the wording of a message contributes little to separating phishing from legitimate mail: a wording-only classifier reached a cross-validated F1 of $0.708 \pm 0.020$, below the always-phishing baseline of $0.736 \pm 0.008$, with an AUC of $0.629$. Adding the sender address raised F1 to $0.806 \pm 0.040$ and AUC to $0.837$. When legitimate and phishing messages share their wording, the sender carries the signal. This finding is limited to the corpus, whose phishing messages were written by the author.
 
-RQ3. I wired FGSM and PGD to a CIFAR-10 ResNet-56 and exported a 200-image batch (clean accuracy $0.955$; Table~\ref{tab:adv}). My supervisor asked for ResNet-50. I explained the CIFAR choice in Section~\ref{sec:resnet-choice}.
+\paragraph{RQ2.} A deepfake module can support awareness teaching without processing media by presenting scenario-based cues and defences with an explicit provenance label (preset, LLM narration or fallback). The limit of this design is that it teaches procedures, not detection, and its effect on learners was not measured.
 
-The 75\% and 51\% dashboard values stay in the configuration column. I will not move them into the findings column.
-
-Gemini still writes teaching mail. I still have to defend every number myself. Appendix~\ref{app:ai} is the AI declaration.
+\paragraph{RQ3.} An undefended, pretrained CIFAR-10 ResNet-56 is highly vulnerable: clean accuracy of 0.955 falls to 0.45 under FGSM and 0.05 under PGD at $\varepsilon = 2/255$, and PGD reduces accuracy to 0 at $8/255$ and $16/255$, with every perturbation within its budget.
 
 \section{Future work}
 \label{sec:future}
 
-If I continue the project after delivery, I would do the following.
+In order of priority, the following work would most strengthen the laboratory and its evaluation:
 
 \begin{enumerate}
-\item Build a harder phishing corpus, or drop the TF-IDF score from the report and keep only a manual review of the teaching rows.
-\item Add a real frame-level detector only if I can run it on a public set such as FaceForensics++ and report that set's protocol~\cite{rossler2019faceforensics}.
-\item Add structured logs that store a timestamp and a hashed user name, not the email body, if an examiner needs repudiation.
-\item Write one or two browser tests for login, load-90, and the 503 path of the attack tab.
+\item Evaluate the LLM-based email analysis on the benchmark corpus and report its accuracy next to the TF-IDF models.
+\item Add a test set of phishing emails generated by an LLM through the laboratory's own generator, and measure whether models trained on author-written emails detect them.
+\item Obtain independent labels for a sample of the corpus from a second annotator and report the agreement.
+\item Carry out a controlled study with learners, following the design of earlier anti-phishing training studies~\cite{sheng2007phil}.
+\item Add output-side controls to the generator and a data-protection notice to the analysis module.
+\item Evaluate the preprocessing defences that the laboratory recommends against adaptive attacks~\cite{guo2018countering,athalye2018obfuscated}.
+\item Pin the model weights and library versions, move sessions and rate limits to a shared store for multi-instance deployment, and add end-to-end HTTP tests.
 \end{enumerate}
-
-I would not add an SMTP sender. I would not harvest a mailbox. I would not present template bands as clinical evidence.

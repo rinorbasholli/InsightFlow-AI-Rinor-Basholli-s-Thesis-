@@ -1,46 +1,79 @@
 \chapter{Requirements and use cases}
 \label{cha:req}
 
-This chapter lists the requirements I used while I implemented the laboratory. I wrote them after the first interface draft and after the meeting with my supervisor. I needed a list that I could test against the code, not a generic product backlog.
+This chapter specifies what the laboratory must do. It identifies the actors, lists the functional and non-functional requirements with their origin and priority, and details the main use cases. The requirements were refined iteratively during development; the \emph{Source} column records why each one exists, so that it can be traced to the problem statement, to the threat analysis or to the evaluation design.
 
 \section{Actors}
 \label{sec:actors}
 
-I considered three actors.
+Three human actors and two external systems interact with the laboratory (Figure~\ref{fig:usecases}).
 
 \begin{description}
-\item[Student / author] I use the laboratory to generate samples, load the 90-row set, and run the local evaluation scripts.
-\item[Examiner] An examiner opens the laboratory, logs in, and walks through the four screens.
-\item[Supervisor] The supervisor reviews the same screens and asks where each number comes from.
+\item[Learner] A student who uses the laboratory modules to generate and inspect phishing emails, examine deepfake scenarios and run adversarial attacks.
+\item[Instructor] A teacher or examiner who demonstrates the modules, inspects the provenance of results and consults the exported evaluation files.
+\item[Operator] The person who deploys the laboratory, sets the access credentials and API keys, and starts the attack service.
+\item[Gemini API] The external LLM service used for phishing generation, email analysis and deepfake narration.
+\item[Attack service] The local Python service that runs FGSM and PGD on the pretrained classifier.
 \end{description}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  actor/.style={draw, rounded corners, font=\scriptsize\bfseries, minimum width=2.0cm, minimum height=0.7cm, align=center},
+  uc/.style={draw, ellipse, font=\scriptsize, minimum width=3.6cm, minimum height=0.75cm, align=center},
+  line/.style={thin}
+]
+\draw[rounded corners] (2.3,1.0) rectangle (8.9,-7.6);
+\node[font=\scriptsize\bfseries] at (5.6,0.7) {InsightFlow AI};
+\node[uc] (u1) at (5.6,0.0) {UC1 Sign in};
+\node[uc] (u2) at (5.6,-1.1) {UC2 Load teaching set};
+\node[uc] (u3) at (5.6,-2.2) {UC3 Generate phishing email};
+\node[uc] (u4) at (5.6,-3.3) {UC4 Analyse email};
+\node[uc] (u5) at (5.6,-4.4) {UC5 Inspect deepfake scenario};
+\node[uc] (u6) at (5.6,-5.5) {UC6 Run adversarial attack};
+\node[uc] (u7) at (5.6,-6.6) {UC7 Reproduce evaluation};
+\node[actor] (l) at (0,-1.6) {Learner};
+\node[actor] (i) at (0,-4.6) {Instructor};
+\node[actor] (o) at (0,-6.6) {Operator};
+\node[actor] (g) at (11.2,-2.7) {Gemini API};
+\node[actor] (a) at (11.2,-5.5) {Attack service};
+\foreach \u in {u1,u2,u3,u4,u5,u6} \draw[line] (l) -- (\u.west);
+\foreach \u in {u1,u5,u6,u7} \draw[line] (i) -- (\u.west);
+\draw[line] (o) -- (u7.west);
+\draw[line] (u3.east) -- (g); \draw[line] (u4.east) -- (g); \draw[line] (u5.east) -- (g);
+\draw[line] (u6.east) -- (a);
+\end{tikzpicture}
+\caption{Use-case diagram of the laboratory.}
+\label{fig:usecases}
+\end{figure}
 
 \section{Functional requirements}
 \label{sec:fr}
 
-Table~\ref{tab:fr} lists the functional requirements. I mapped each one to a file or a route so that I could check it later.
+Table~\ref{tab:fr} lists the functional requirements, prioritised with the MoSCoW scheme (\emph{Must}, \emph{Should}, \emph{Could}). The source column refers to the problem statement (P), the threat analysis in Section~\ref{sec:stride} (T) or the evaluation design (E).
 
 \begin{table}[htbp]
 \centering
 \caption{Functional requirements.}
 \label{tab:fr}
 \scriptsize
-\begin{tabular}{p{1.3cm}p{7.4cm}p{3.4cm}}
+\begin{tabular}{p{0.7cm}p{6.4cm}p{1.0cm}p{0.7cm}p{2.7cm}}
 \toprule
-ID & Requirement & Where I implemented it \\
+ID & Requirement & Priority & Source & Realised by \\
 \midrule
-FR1 & Authenticate every page and every API call when credentials are configured. Fail closed in production if they are missing. & \texttt{labSecurity.ts}, \texttt{server.ts} \\
-FR2 & Generate a teaching phishing email from a scenario, a prompt, and a complexity level. & \texttt{POST /api/generate-phishing} \\
-FR3 & Analyse subject, body, and optional sender. Return scores, a predicted class, and a rationale. & \texttt{POST /api/analyze-email} \\
-FR4 & Accept a local \texttt{.txt} or \texttt{.eml} file in the Email Security Check and parse From / Subject / body. & \texttt{parseEmailFile} in \texttt{academicDataset.ts} \\
-FR5 & Load 90 in-memory teaching emails with a fixed seed. & \texttt{generate90Samples()} \\
-FR6 & Analyse a deepfake \emph{scenario} from a filename, a media type, and a text prompt. Do not read media bytes. & \texttt{POST /api/analyze-media-deepfake} \\
-FR7 & Return hardcoded JSON when the filename matches a preset exactly. & \texttt{PRE\_BAKED\_DEEPFAKES} \\
-FR8 & Run a real FGSM or PGD step on a pretrained CIFAR-10 classifier. Do not invent the confidence with Gemini. & \texttt{POST /api/adversarial-perturb}, \texttt{eval/adversarial/service.py} \\
-FR9 & Expose an evaluation health check. & \texttt{GET /api/eval/health} \\
-FR10 & Put \texttt{source} on every analytical JSON response. & \texttt{server.ts} \\
-FR11 & Reject prompt text that matches a small injection list. & \texttt{promptLooksInjected} \\
-FR12 & Limit JSON body size and hourly POST rate. & \texttt{express.json} 32\,kB; \texttt{rateLimitApi} \\
-FR13 & Show dashboard aggregates as configuration, not as filter measurements. & \texttt{UnifiedAnalysisDashboard.tsx} \\
+FR1 & Require authentication for every API call when credentials are configured, and refuse to serve the laboratory in production when they are not. & Must & T & \texttt{labSecurity.ts} \\
+FR2 & Generate a teaching phishing email from a scenario, a topic, optional instructions and a complexity level. & Must & P & \texttt{POST /api/generate-phishing} \\
+FR3 & Analyse a subject, a body and an optional sender, and return scores, indicators, mitigations and a predicted class with a rationale. & Must & P & \texttt{POST /api/analyze-email} \\
+FR4 & Accept a local \texttt{.txt} or \texttt{.eml} file and extract sender, recipient, subject and body in the browser. & Should & P & \texttt{parseEmailFile} \\
+FR5 & Load a seeded, reproducible set of 90 teaching emails (30 per class) into the dashboard. & Must & P & \texttt{generate90Samples} \\
+FR6 & Analyse a deepfake \emph{scenario} from a filename, a media type and a description, without reading media content. & Must & P & \texttt{POST /api/analyze-media-deepfake} \\
+FR7 & Return fixed teaching content when the filename matches one of three presets. & Should & P & \texttt{PRE\_BAKED\_DEEPFAKES} \\
+FR8 & Run FGSM or PGD on a pretrained CIFAR-10 classifier for a chosen class and budget, untargeted by default and targeted on request. & Must & P, E & \texttt{POST /api/adversarial-perturb}, \texttt{service.py} \\
+FR9 & Label every successful analytical response with \texttt{source} $\in$ \{\texttt{gemini}, \texttt{fallback}, \texttt{preset}, \texttt{computed}\}. & Must & P & \texttt{server.ts}, \texttt{service.py} \\
+FR10 & Return a deterministic fallback when Gemini is unavailable on the email and deepfake routes; return HTTP~503 on the adversarial route when the attack service is unavailable. & Must & P & Route handlers \\
+FR11 & Expose the health of the attack service and the exported metric files. & Should & E & \texttt{GET /api/eval/*} \\
+FR12 & Present dashboard aggregates as configured teaching values, not as measurements. & Must & P & \path{UnifiedAnalysisDashboard.tsx} \\
+FR13 & Provide scripts that regenerate the phishing benchmark and the adversarial batch results from code. & Must & E & \path{eval/} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -48,57 +81,89 @@ FR13 & Show dashboard aggregates as configuration, not as filter measurements. &
 \section{Non-functional requirements}
 \label{sec:nfr}
 
-Table~\ref{tab:nfr} lists the quality constraints I accepted.
+Table~\ref{tab:nfr} lists the non-functional requirements. Where possible, each has a measurable target that is verified in Chapter~\ref{cha:eval}.
 
 \begin{table}[htbp]
 \centering
-\caption{Non-functional requirements.}
+\caption{Non-functional requirements with measurable targets.}
 \label{tab:nfr}
 \scriptsize
-\begin{tabular}{p{1.3cm}p{11.0cm}}
+\begin{tabular}{p{0.9cm}p{2.1cm}p{6.6cm}p{0.8cm}}
 \toprule
-ID & Requirement \\
+ID & Quality & Requirement and target & Source \\
 \midrule
-NFR1 & Secrets stay in environment variables. They are not committed. \\
-NFR2 & Password comparison uses a length-safe \texttt{crypto.timingSafeEqual} wrapper. \\
-NFR3 & The teaching dataset is templates plus a seed. It is not a mailbox harvest. \\
-NFR4 & The deepfake tab must say that bytes are not inspected. \\
-NFR5 & If Gemini is down, email generate/analyse and non-preset deepfake still return a deterministic fallback. Adversarial does not. \\
-NFR6 & Client state is \texttt{useState} only. There is no database. \\
-NFR7 & The report language is English. The user interface is English. \\
-NFR8 & Automated tests cover auth helpers and the injection check. \\
-NFR9 & The laboratory is educational. It is not a production detector. \\
+NFR1 & Security & JSON request bodies larger than 32\,kB are rejected. & T \\
+NFR2 & Security & At most 10 \texttt{POST} requests per hour per client address to the generation route, and 40 to every other \texttt{POST /api/} route. & T \\
+NFR3 & Security & Credentials are compared in constant time; empty or length-mismatched values never authenticate. & T \\
+NFR4 & Security & Sessions expire after 12 hours; session tokens carry 192 bits of randomness and are sent in \texttt{HttpOnly}, \texttt{SameSite=Lax} cookies. & T \\
+NFR5 & Security & Secrets are supplied through environment variables and are never committed to the repository. & T \\
+NFR6 & Integrity of results & Every adversarial example satisfies $\|x_{\mathrm{adv}} - x\|_\infty \le \varepsilon$; a violation is reported as an error, never returned as a result. & E \\
+NFR7 & Reproducibility & Running each evaluation script twice on the same commit yields identical metric files (fixed seed 20260927). & E \\
+NFR8 & Availability & The website remains usable when Gemini or the attack service is down; affected routes degrade as specified in FR10. & P \\
+NFR9 & Testability & The automated test suite runs offline, without calling Gemini, in under 10 seconds. & E \\
+NFR10 & Portability & The application can be built and run as a container image. & P \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\section{Use cases}
+\section{Main use cases}
 \label{sec:uc}
 
-I used the following use cases when I tested the interface by hand.
+Tables~\ref{tab:uc1}--\ref{tab:uc6} detail the three use cases that carry the main security and evaluation logic. The remaining use cases follow the same pattern and are covered by the sequence diagrams in Chapter~\ref{cha:arch}.
 
-\subsection{UC1 --- Log in to the laboratory}
-The examiner opens \texttt{http://localhost:3000} (or a host that I start from this repository). The React login form posts to \texttt{/api/login} and stores an HttpOnly cookie. HTTP Basic Auth still works for \texttt{curl} and for older clients. After a valid pair, later \texttt{/api/*} calls require that cookie or the Basic header. Static files load so the login page can render. If \texttt{LAB\_BASIC\_USER} or \texttt{LAB\_BASIC\_PASS} is missing in production, the server answers 503 and the laboratory stays closed.
+\begin{table}[htbp]
+\centering
+\caption{UC1 --- Sign in.}
+\label{tab:uc1}
+\scriptsize
+\begin{tabular}{p{2.4cm}p{10.0cm}}
+\toprule
+Actor & Learner or Instructor \\
+Precondition & The Operator has set \texttt{LAB\_BASIC\_USER} and \texttt{LAB\_BASIC\_PASS}. \\
+Main flow & (1) The browser loads the login page, which is served without a session. (2) The actor submits a username and password. (3) The server compares both values in constant time. (4) The server creates a session and returns an \texttt{HttpOnly} cookie. (5) The application shows the dashboard. \\
+Alternative flows & (3a) Wrong credentials: HTTP~401, the form shows an error. (1a) Credentials not configured in production: every request receives HTTP~503 and the laboratory stays closed. (1b) Non-interactive clients may use HTTP Basic authentication instead of the cookie. \\
+Postcondition & Subsequent \path{/api/*} calls are accepted until the session expires or the actor signs out. \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\subsection{UC2 --- Load the 90-sample teaching set}
-On the dashboard the examiner clicks ``Reset \& Load Study Dataset (90 Samples)''. \texttt{App.tsx} calls \texttt{generate90Samples()} and stores the array in React state. The counts 30 / 30 / 30 appear. The mean designed realism and the ``100 minus mean AI detectability'' values appear. Those two percentages are configuration from the bands in \texttt{academicDataset.ts}. They are not Gmail results.
+\begin{table}[htbp]
+\centering
+\caption{UC4 --- Analyse email.}
+\label{tab:uc4}
+\scriptsize
+\begin{tabular}{p{2.4cm}p{10.0cm}}
+\toprule
+Actor & Learner; Gemini API \\
+Precondition & The actor is signed in. \\
+Main flow & (1) The actor pastes a subject, body and optional sender, or loads a \texttt{.txt}/\texttt{.eml} file that is parsed in the browser. (2) The browser posts the fields to \path{/api/analyze-email}. (3) The server places the email between explicit untrusted-data markers in the prompt and calls Gemini with a JSON response schema. (4) The server normalises the predicted class and returns the analysis with \texttt{source=gemini}. (5) The dashboard adds the result to the session history. \\
+Alternative flows & (3a) Gemini fails: the server returns a keyword-heuristic analysis with \texttt{source=fallback}. (2a) More than 40 requests in the last hour: HTTP~429. (2b) Body larger than 32\,kB: HTTP~413. \\
+Postcondition & The result is visible with its provenance; nothing is stored on the server. \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\subsection{UC3 --- Generate an AI phishing email}
-On the AI Phishing Lab tab the examiner sets a scenario and clicks generate. The browser posts to \texttt{/api/generate-phishing}. If the custom prompt looks injected, the server returns 400. If the hourly limit is reached, it returns 429. Otherwise Gemini is called. On success the JSON has \texttt{source: "gemini"}. On API error the JSON has \texttt{source: "fallback"} and a fixed ESTiG-themed template.
-
-\subsection{UC4 --- Analyse pasted text or a local file}
-The examiner pastes subject and body, or loads a \texttt{.txt} / \texttt{.eml} file. The browser posts to \texttt{/api/analyze-email}. Known samples keep their teaching label. Live text gets a Gemini class or the keyword fallback. The dashboard then shows the new row with \texttt{analysisSource}.
-
-\subsection{UC5 --- Inspect a deepfake scenario}
-The examiner picks one of the three presets or types another filename. The server never opens the file. An exact preset name returns \texttt{source: "preset"}. Another name goes to Gemini or to \texttt{getDynamicFallbackDeepfake}. Marker confidences are simulated.
-
-\subsection{UC6 --- Run a real model attack}
-On the AI Model Attacks tab the examiner chooses a CIFAR-10 class pair, FGSM or PGD, and an $\varepsilon$ value and clicks simulate. Express posts to the Python service. The default attack is untargeted FGSM or PGD on CIFAR-10 ResNet-56, with $L_\infty$ clipped to $\varepsilon$. Targeted mode is only used when the request sets \texttt{targeted: true}. A success answer has \texttt{source: "computed"} and softmax values from that network. If the service is down, the UI shows an error. Gemini is not used. There is no ResNet-50 control.
-
-\subsection{UC7 --- Check the attack service}
-The front end or a script can call \texttt{GET /api/eval/health}. Express forwards to the Python \texttt{/health} route. This is how I know whether UC6 can succeed.
+\begin{table}[htbp]
+\centering
+\caption{UC6 --- Run adversarial attack.}
+\label{tab:uc6}
+\scriptsize
+\begin{tabular}{p{2.4cm}p{10.0cm}}
+\toprule
+Actor & Learner or Instructor; Attack service \\
+Precondition & The actor is signed in; the Operator has started the attack service. \\
+Main flow & (1) The actor selects a CIFAR-10 class, FGSM or PGD, and a budget $\varepsilon \in (0, 0.25]$. (2) The server forwards the request to the attack service. (3) The service selects the first test image of that class that the model classifies correctly, runs an untargeted attack, and measures $\|x_{\mathrm{adv}} - x\|_\infty$. (4) The service returns the clean and adversarial predictions with their softmax confidences, the budget and the measured perturbation with \texttt{source=computed}. \\
+Alternative flows & (2a) Attack service unreachable: HTTP~503 with \texttt{source=unavailable}; no values are shown. (3a) Unknown class or budget outside the allowed range: HTTP~400. (3b) Measured perturbation exceeds $\varepsilon$: HTTP~500; no result is returned. (1a) A request with \texttt{targeted: true} runs a targeted attack towards a second class and reports whether the target was reached. \\
+Postcondition & The displayed numbers are model outputs for one image; they are distinct from the batch evaluation in Chapter~\ref{cha:eval}. \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{Out of scope}
 \label{sec:oos}
 
-I did not implement a mail sender. I did not implement a real deepfake detector. I did not harvest inboxes. I did not train a production spam filter. I did not keep server-side logs of generated emails. Those limits are intentional. They also appear again in Chapter~\ref{cha:disc}.
+The following are deliberately excluded: sending email, harvesting or storing real mailboxes, detecting manipulation in uploaded media, training or fine-tuning models, per-user accounts and roles, and server-side storage of generated or analysed content. Chapter~\ref{cha:disc} discusses the consequences of these exclusions.
+
+\section{Summary}
+
+The requirements combine teaching functions (FR2--FR8), a provenance contract (FR9, FR10, FR12), security controls derived from the threat analysis (FR1, NFR1--NFR5) and evaluation properties (FR13, NFR6, NFR7). Chapter~\ref{cha:arch} shows how the architecture realises them.

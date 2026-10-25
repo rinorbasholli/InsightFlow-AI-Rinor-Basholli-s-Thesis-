@@ -1,74 +1,78 @@
 \chapter{Discussion}
 \label{cha:disc}
 
-This chapter discusses what the results can and cannot support, the limits of the laboratory, ethics and dual use, and a STRIDE reading of the deployed system.
+This chapter interprets the results in relation to the literature, examines the threats to their validity, lists the limitations of the laboratory, discusses ethics and dual use, and presents the STRIDE analysis of the system.
 
-\section{What I can defend}
-\label{sec:defend}
+\section{Interpretation of the results}
+\label{sec:interp}
 
-I can defend the following statements.
+\paragraph{Phishing.} The benchmark indicates that, once phishing wording is as polished and context-specific as legitimate institutional mail, a wording-based classifier performs no better than always predicting phishing, while the sender address separates the classes. This matches the concern raised by work on LLM-generated phishing~\cite{hazell2023spear,heiding2024devising}: content quality no longer distinguishes attacks. It also explains why the classical detector of Fette et al.\ relied on structural and sender-related features~\cite{fette2007learning}. The practical consequence for teaching is that awareness training should move from ``look for spelling mistakes'' towards verifying the sender and the destination of links, and that organisations should rely on domain authentication~\cite{rfc9989}. The laboratory's mitigation advice follows this direction.
 
-\begin{itemize}
-\item I built one web laboratory with four screens and labelled sources.
-\item The 90 emails are seeded templates. The 75\% and 51\% dashboard values are configuration from those templates.
-\item The phishing JSON reports two models. Wording-only F1 $= 0.706$ on the 70/30 split, below always-phish $0.733$. With-sender F1 $= 0.756$ on that split and $0.806\pm0.040$ under 5-fold CV. Ham recall on wording-only is $2/24$. I read that as a small, still-biased teaching set, not as a detector for the internet.
-\item The 200-image adversarial batch is in \texttt{eval/adversarial/results/adversarial\_metrics.json}: clean accuracy $0.955$; PGD ASR $0.948$ / $1.00$ / $1.00$ at $\varepsilon=2/255$, $8/255$, $16/255$ among the 191 images the model already classified correctly. That is CIFAR-10 ResNet-56, not ImageNet.
-\item The deepfake tab does not inspect bytes.
-\item Auth, the 32\,kB limit, the rate limit, and the injection regex are in the code and covered by the automated tests.
-\end{itemize}
+\paragraph{Adversarial examples.} The near-complete loss of accuracy of an undefended ResNet-56 under PGD at $8/255$ reproduces, on a small sample, the well-known fragility of standard training~\cite{szegedy2014intriguing,madry2018towards}. The contribution of the module is not this finding, which is expected, but its presentation: learners obtain real model outputs, with the budget verified, in the same environment in which they meet LLM-generated content, and they can see that a confident softmax output is not evidence of correctness.
 
-I cannot defend a claim that InsightFlow AI detects phishing in the wild. I cannot defend a claim that it detects deepfakes. I can defend the ASR values in Table~\ref{tab:adv} as the export of this 200-image CIFAR-10 run, and I cannot treat them as ImageNet or campus-model results.
+\paragraph{Deepfakes.} The scenario module answers RQ2 only at the level of design. It shows that awareness content can be delivered without processing media and with explicit provenance, and that the defences it teaches (out-of-band verification, provenance checks) do not depend on detecting artefacts. It cannot show that learners become better at recognising deepfakes; that would require a study with participants.
+
+\paragraph{Provenance.} Across the three modules, the \texttt{source} label separates computed results from LLM narration, presets and fallbacks. This separation is the central design property of the laboratory, and it is enforced by tests rather than by convention.
+
+\section{Threats to validity}
+\label{sec:validity}
+
+\paragraph{Construct validity.} The phishing class labelled ``look-alike / spear-phishing'' imitates the style of LLM-generated phishing but was written by the author; the benchmark therefore does not measure the detection of LLM-generated email. The wording-only model is not strictly content-only, because message bodies contain link host names. The configured dashboard values do not measure any construct and are excluded from the findings.
+
+\paragraph{Internal validity.} The same person designed, wrote and labelled the corpus, so the classifier may partly learn the author's writing habits, and the manual check of twenty labels is not independent. The PGD attack uses ten steps without random restarts, which can overestimate robust accuracy; at $8/255$ and above this does not affect the conclusion, because robust accuracy is already zero.
+
+\paragraph{External validity.} The phishing results apply to a small reconstructed corpus of 187 emails from one institutional context and do not transfer to real mail streams. The adversarial results apply to one pretrained model on 200 CIFAR-10 test images; other architectures, datasets or defended models may behave differently.
+
+\paragraph{Reliability.} Both evaluations use fixed seeds and regenerate their results from code, and the adversarial result file records the commit, the PyTorch version and the time of generation. Two dependencies are not pinned: the PyTorch version is not fixed in \path{eval/requirements.txt}, and the model is loaded from the default branch of its repository through \texttt{torch.hub}, so a future change upstream could alter the weights.
 
 \section{Limitations}
 \label{sec:limits-disc}
 
-The phishing corpus repeats a short list of patterns. The gap between wording-only and with-sender is the finding: CV F1 $0.708\pm0.020$ versus $0.806\pm0.040$, against an always-phish dummy of $0.736\pm0.008$. Bodies still contain URLs, so wording-only is not domain-free. A harder corpus would need messages that share vocabulary across classes without leaking the host in either the From line or the body. I did not build that.
+Beyond the threats above, the laboratory has the following limitations.
 
-The live attack and the 200-image batch are the same pixel-space loops, but they are not the same experiment: the batch is untargeted on 200 images; Simulate is untargeted on one image unless the request sets \texttt{targeted: true}. I do not mix those figures.
-
-The teaching set in the browser is also easy on purpose. Conventional rows shout. Legitimate rows are calm and use \texttt{ipb.pt}. AI-style rows are polite and use lookalike hosts. A student can learn the contrast. A paper cannot treat the contrast as a field result.
-
-The deepfake presets always return the same markers. Gemini, when it is used, writes a plausible story from the filename. That can over-fit the word ``urgent''. I accepted this because I refused to fake a pixel detector.
-
-I have no application logs of who generated which email. That is good for privacy. It is bad for repudiation (Section~\ref{sec:stride}).
-
-Examiners should treat \texttt{http://localhost:3000} from this repository as the system I defend. Figures~\ref{fig:ui-login}--\ref{fig:ui-adv} are captures of that interface.
+\begin{itemize}
+\item \textbf{The LLM-based email analysis is not evaluated.} The classification that learners see in the analysis module comes from Gemini, whose accuracy on the benchmark corpus was not measured; the TF-IDF benchmark evaluates a different model. Published results for LLM detectors~\cite{koide2024chatspamdetector} do not transfer to this corpus.
+\item \textbf{No learner study.} The educational effect of the laboratory has not been measured. Prior work shows how such an evaluation can be designed~\cite{sheng2007phil}.
+\item \textbf{No media analysis.} The deepfake module does not inspect files and cannot demonstrate detection.
+\item \textbf{Residual prompt-injection risk.} The denylist covers only naive direct-injection phrasing~\cite{perez2022ignore}, and the untrusted-data markers in the analysis prompt reduce but do not remove the risk of indirect injection~\cite{greshake2023signed}. The JSON response schema limits what an injected instruction can make the server return, but not what the model writes inside the permitted fields.
+\item \textbf{Single-instance state.} Sessions and rate-limit counters are held in process memory; they are lost on restart and are not shared between instances (Section~\ref{sec:deploy}).
+\item \textbf{Shared credentials and no audit log.} All users share one credential pair, and requests are not logged per user.
+\item \textbf{Tests at function level.} The automated tests do not exercise the HTTP routes end to end, and the fallback and 503 paths are verified by inspection rather than by tests.
+\end{itemize}
 
 \section{Ethics and dual use}
 \label{sec:ethics}
 
-A phishing generator is dual use. The same route that helps an examiner see a clean spear-phish can help someone send one. I tried to reduce that risk without pretending I removed it.
+\paragraph{Dual use.} A phishing generator can serve attackers as well as learners, particularly when it produces lures tailored to a specific institution. The laboratory reduces this risk on the access side: it requires authentication and fails closed in production, limits generation to ten requests per hour per client, rejects obvious injection attempts, and has no function for sending email. These measures restrict \emph{who} can generate content and \emph{how much}, but not \emph{what} is generated. Output-side controls, such as a visible marker inserted into every generated message or replacing links with non-resolvable placeholders, were not implemented and are proposed as future work. The adversarial module attacks a public benchmark model, not a deployed system, and the deepfake module produces no synthetic media.
 
-I did not attach a mail sender. The generate route returns JSON to the browser. It does not talk to SMTP. I rate-limited generate to 10 requests per IP per hour. I rejected a small class of prompt-injection strings. I locked the site with a login cookie and Basic Auth. I wrote teaching text that names lookalike domains instead of publishing a kit for a real campus mailbox.
+\paragraph{Data protection.} The analysis module accepts pasted text and \texttt{.eml} files, which may contain personal data of third parties, and forwards the extracted text to an external LLM provider. The laboratory stores none of this content on its server, but the transfer itself is a processing of personal data within the meaning of the General Data Protection Regulation~\cite{gdpr2016}. In its current form the module should therefore be used with the teaching material supplied with the laboratory or with messages from which personal data has been removed, and users should be told so on the analysis screen. This notice is not yet shown in the interface.
 
-The deepfake tab can still normalise the idea of a forged CEO video. I kept it as a scenario inspector with a visible source label. I did not add a face-swap model.
+\paragraph{Honesty of outputs.} Presenting LLM-written scores as measurements would mislead learners about what AI systems can establish. The provenance labels, the absence of a fallback on the adversarial route and the labelling of configured dashboard values address this risk directly.
 
-FGSM and PGD are standard teaching attacks~\cite{goodfellow2015explaining,madry2018towards}. I run them on CIFAR-10, not on a production campus model. The service can be placed behind \texttt{EVAL\_INTERNAL\_TOKEN}.
-
-I am responsible for how I demonstrate the laboratory. I will not use generated mail against real people.
-
-\section{STRIDE}
+\section{STRIDE analysis}
 \label{sec:stride}
 
-I used the STRIDE categories as a short threat pass~\cite{shostack2014threat,microsoftstride}. Table~\ref{tab:stride} is the result for this laboratory, not for a generic web app.
+Table~\ref{tab:stride} applies the STRIDE categories~\cite{shostack2014threat,microsoftstride} to the laboratory as deployed, with the controls in place and the residual risk.
 
 \begin{table}[htbp]
 \centering
-\caption{STRIDE notes for InsightFlow AI.}
+\caption{STRIDE analysis of InsightFlow AI.}
 \label{tab:stride}
 \scriptsize
-\begin{tabular}{p{2.6cm}p{10.4cm}}
+\begin{tabular}{p{2.0cm}p{3.6cm}p{3.6cm}p{3.2cm}}
 \toprule
-Category & What I saw in this system \\
+Category & Threat & Control & Residual risk \\
 \midrule
-Spoofing & The login is a shared examiner pair checked with a timing-safe helper, then a session cookie or HTTP Basic Auth. An attacker who obtains that pair can act as an examiner. There is no second factor. \\
-Tampering & The generate and analyse routes send prompts to Gemini. A student can try to overwrite the system task. \texttt{promptLooksInjected} rejects a few strings. The JSON schema still trusts the model output shape. The attack route has no invented-confidence fallback: a missing eval service returns 503. \\
-Repudiation & I do not store server-side logs of generated emails or login names. A user can deny a generate call. For a teaching lab I preferred less retention. For an awareness campaign this would be unacceptable. \\
-Information disclosure & If the lock is off in production, anyone with the URL can generate mail and see teaching samples. That is why production fail-closes when env vars are missing. Gemini prompts include the user text, so prompt content leaves the campus machine. \\
-Denial of service & I rate-limit POST \texttt{/api/} paths: 10/hour/IP for generate-phishing, 40/hour/IP otherwise. Bodies above 32\,kB are rejected. Gemini or the Python service can still be slow or down. The website stays up; the attack tab returns 503. \\
-Elevation of privilege & There is only one role. There is no admin panel. Elevation here would mean leaving the Node process and reaching the Python service without the eval token, or reading \texttt{.env.local}. The token is an env var. It is not in git. \\
+Spoofing & Unauthorised use of the laboratory, in particular of the generator. & Authentication on every API route; constant-time comparison; fail-closed production mode; \texttt{HttpOnly} session cookies. & One shared credential pair; no second factor. \\
+Tampering & Prompt injection that changes the task of the LLM; tampering with reported results. & Denylist on user prompts; untrusted-data markers for emails; JSON response schemas; adversarial results only from the attack service, with the budget verified. & Indirect injection not fully prevented. \\
+Repudiation & A user denies having generated a message. & None beyond authentication. & No per-user accounts or audit log; accepted for a teaching tool, not for production use. \\
+Information disclosure & Exposure of the API key or credentials; personal data in analysed emails sent to the LLM provider. & Secrets in environment variables only; key never sent to the browser; no server-side storage of content. & Analysed text leaves the institution; requires a usage notice (Section~\ref{sec:ethics}). \\
+Denial of service & Exhaustion of LLM quota or server resources. & 32\,kB body limit; per-address hourly limits keyed on \texttt{req.ip}; independent failure of the attack service. & Limits are per instance; no global quota. \\
+Elevation of privilege & Direct access to the attack service, bypassing the web server. & Optional shared token between server and attack service; single application role. & Token is optional; the service should not be exposed publicly without it. \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-STRIDE did not make the laboratory ``secure''. It made the remaining holes easier to say out loud: one shared password, no audit log, a weak injection list, and a public URL that must stay locked.
+\section{Summary}
+
+The results support three claims within their scope: wording does not separate the classes of the reconstructed corpus while the sender does; an undefended CIFAR-10 classifier is fragile under standard $L_\infty$ budgets; and the provenance of every output can be made explicit and tested. They do not support claims about real mail streams, about deepfake detection or about learning outcomes. Chapter~\ref{cha:conc} draws the conclusions.

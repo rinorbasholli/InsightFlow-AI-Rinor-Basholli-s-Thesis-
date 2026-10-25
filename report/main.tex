@@ -19,11 +19,14 @@
 \usepackage{tabularx}
 \usepackage{amsmath}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,calc,fit}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,shapes.geometric}
 \usepackage{csquotes} % recommended by biblatex with babel
 \usepackage[backend=biber,style=ieee]{biblatex}
 \addbibresource{refs.bib}
 \usepackage[pdftex,hidelinks]{hyperref}
+\setlength{\emergencystretch}{3em} % fewer overfull lines with long identifiers
+% Visible marker for items the author must complete before submission
+\newcommand{\todo}[1]{\textbf{[TO DO: #1]}}
 \usepackage[newfloat]{minted}
 \setminted{breaklines,fontsize=\scriptsize,frame=single}
 
@@ -55,35 +58,44 @@ Gostaria de agradecer ao Professor Tiago Pedrosa pela orientação, pelas correc
 
 I would like to thank Professor Tiago Pedrosa for the supervision, for the direct corrections, and for asking for numbers that I can defend. I also thank ESTiG and the Instituto Politécnico de Bragança for the working conditions.
 
-\prefacesection{Resumo/Abstract}
-Este relatório descreve o laboratório educacional InsightFlow AI (AI Cybersecurity Risk Lab), que implementei para o Projecto de Licenciatura em Engenharia Informática. O laboratório junta, num só fluxo, três riscos de cibersegurança ligados à inteligência artificial: correio de phishing gerado por modelos de linguagem, cenários de deepfake e ataques adversariais a um classificador de imagens. O conjunto de 90 emails é um conjunto de templates em memória, com semente fixa 20260927. O separador de deepfake não inspecciona bytes. A avaliação adversarial usa uma ResNet-56 pré-treinada em CIFAR-10. Cada resposta JSON de análise tem um campo \texttt{source} (\texttt{gemini}, \texttt{fallback}, \texttt{preset} ou \texttt{computed}). Os valores 75\% e 51\% do painel são configuração das bandas do dataset, não resultados. No corpus de wording, o F1 sem o campo From é 0,706; com o remetente é 0,756 (divisão 70/30). A linha de base ``sempre phishing'' é 0,733. São valores de ensino, não um detector de mailbox.
+\prefacesection{Resumo}
+A inteligência artificial generativa reduz o custo do phishing, dos deepfakes e dos ataques adversariais, mas os estudantes encontram normalmente estes riscos em ferramentas separadas, que raramente distinguem resultados medidos de texto gerado por um modelo. Este relatório apresenta o InsightFlow AI, um laboratório web que reúne phishing gerado por IA, cenários de deepfake e ataques adversariais num único fluxo autenticado, e que identifica a proveniência de cada resultado analítico (\texttt{gemini}, \texttt{fallback}, \texttt{preset} ou \texttt{computed}). O laboratório é composto por um cliente React, por um servidor Express que invoca a API Gemini e aplica autenticação, limites de pedidos, limites de tamanho e mitigações de injeção de prompts, e por um serviço Python que executa os ataques FGSM e PGD sobre uma ResNet-56 pré-treinada no CIFAR-10. Foram realizadas duas avaliações reprodutíveis. Num corpus reconstruído de 187 emails institucionais, em que as mensagens legítimas e de phishing partilham a redação, um classificador TF-IDF com regressão logística baseado apenas no texto obteve um F1 de 0,708 em validação cruzada, abaixo de uma linha de base que classifica tudo como phishing (0,736); a inclusão do endereço do remetente elevou o F1 para 0,806 e a AUC para 0,837. Em 200 imagens de teste do CIFAR-10, a exatidão de 0,955 desceu para 0,05 com PGD a $\varepsilon = 2/255$ e para 0 a $8/255$, com todas as perturbações verificadas dentro do respetivo limite. Os 31 testes automáticos passam. Os resultados indicam que uma redação cuidada não é um sinal fiável de phishing e que classificadores sem defesas são frágeis; o efeito pedagógico do laboratório e a exatidão da análise de emails baseada em LLM ficam por avaliar.
 
-This report describes the educational laboratory InsightFlow AI (AI Cybersecurity Risk Lab) that I implemented for the Informatics Engineering project course. The laboratory puts three AI-related cybersecurity risks in one workflow: language-model phishing mail, deepfake scenarios, and adversarial attacks on an image classifier. The 90-email set is an in-memory template set with fixed seed 20260927. The deepfake tab does not inspect bytes. The adversarial evaluation uses a CIFAR-10 pretrained ResNet-56. Each analytical JSON response has a \texttt{source} field (\texttt{gemini}, \texttt{fallback}, \texttt{preset}, or \texttt{computed}). The dashboard values 75\% and 51\% are configuration from the dataset bands, not findings. On the reconstructed wording corpus, F1 is 0.706 without the From line and 0.756 with it (70/30 split), against an always-phish baseline of 0.733. That is a computed score on teaching labels, not a mailbox detector finding.
+\textbf{Palavras-chave:} cibersegurança, inteligência artificial, phishing, deepfakes, exemplos adversariais, educação em segurança.
 
-\prefacesection{Abstract/Resumo}
-This report presents InsightFlow AI, an educational web laboratory for three AI cybersecurity risks: AI-generated phishing, deepfake media scenarios, and adversarial examples. I built a React and Express application with HTTP Basic Auth, rate limits, prompt-injection checks, and a Python evaluation service for FGSM and PGD. I cite only numbers that exist in exported files. The 200-image adversarial export has clean accuracy $0.955$ on CIFAR-10 ResNet-56.
+\prefacesection{Abstract}
+Generative artificial intelligence lowers the cost of phishing, deepfakes and adversarial attacks, yet students usually meet these risks in separate tools that rarely distinguish measured results from model-generated text. This report presents InsightFlow AI, a web laboratory that places AI-generated phishing, deepfake scenarios and adversarial attacks in one authenticated workflow and labels every analytical output with its provenance (\texttt{gemini}, \texttt{fallback}, \texttt{preset} or \texttt{computed}). The laboratory consists of a React client, an Express server that calls the Gemini API and enforces authentication, rate limits, request-size limits and prompt-injection mitigations, and a Python service that runs FGSM and PGD attacks on a pretrained CIFAR-10 ResNet-56. Two reproducible evaluations were carried out. On a reconstructed corpus of 187 institutional emails in which legitimate and phishing messages share their wording, a TF-IDF and logistic-regression classifier using the wording alone reached a cross-validated F1 of 0.708, below an always-phishing baseline of 0.736, whereas adding the sender address raised F1 to 0.806 and AUC to 0.837. On 200 CIFAR-10 test images, a clean accuracy of 0.955 fell to 0.05 under PGD at $\varepsilon = 2/255$ and to 0 at $8/255$, with every perturbation verified to lie within its budget. All 31 automated tests pass. The results indicate that polished wording is not a reliable phishing signal and that undefended classifiers are fragile; the educational effect of the laboratory and the accuracy of its LLM-based email analysis remain to be evaluated.
 
-Este relatório apresenta o InsightFlow AI, um laboratório web educacional para três riscos de cibersegurança da IA: phishing gerado por IA, cenários de deepfake e exemplos adversariais. Implementei uma aplicação React e Express com autenticação Basic, limites de taxa, verificação de injecção de prompts e um serviço Python para FGSM e PGD. Cito apenas números que existem em ficheiros exportados. A exportação adversarial de 200 imagens tem exactidão limpa $0{,}955$ na ResNet-56 CIFAR-10.
+\textbf{Keywords:} cybersecurity, artificial intelligence, phishing, deepfakes, adversarial examples, security education.
 
 % Coloca índices / Put indices
 \afterpreface
 
 \prefacesection{Lista de Abreviaturas/Abbreviations}
 \begin{description}
+ \item[AI] Artificial Intelligence
  \item[API] Application Programming Interface
  \item[ASR] Attack Success Rate
+ \item[AUC] Area Under the (ROC) Curve
  \item[CIFAR] Canadian Institute for Advanced Research (image dataset)
+ \item[CV] Cross-Validation
+ \item[DKIM] DomainKeys Identified Mail
+ \item[DMARC] Domain-based Message Authentication, Reporting, and Conformance
  \item[ESTiG] Escola Superior de Tecnologia e Gestão
  \item[FGSM] Fast Gradient Sign Method
  \item[FR] Functional Requirement
+ \item[GDPR] General Data Protection Regulation
  \item[IPB] Instituto Politécnico de Bragança
  \item[JSON] JavaScript Object Notation
+ \item[LLM] Large Language Model
  \item[NFR] Non-Functional Requirement
  \item[PGD] Projected Gradient Descent
+ \item[ROC] Receiver Operating Characteristic
  \item[RQ] Research Question
+ \item[SPF] Sender Policy Framework
  \item[STRIDE] Spoofing, Tampering, Repudiation, Information disclosure, Denial of service, Elevation of privilege
  \item[TF-IDF] Term Frequency--Inverse Document Frequency
- \end{description}
+\end{description}
 
 \bodystart
 

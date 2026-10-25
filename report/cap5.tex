@@ -1,100 +1,180 @@
 \chapter{Implementation}
 \label{cha:impl}
 
-This chapter explains how I built the laboratory and why I made each choice. I write in the past tense because this is the version I am submitting, not a plan.
+This chapter describes how the components of Chapter~\ref{cha:arch} were implemented. It presents the development environment, the client, the security controls, each laboratory module, the evaluation scripts and the tests, and closes with the main technical problems encountered and how they were resolved.
 
-\section{Starting point}
-\label{sec:start}
+\section{Development environment}
+\label{sec:env}
 
-I implemented the laboratory in React, Vite, TypeScript and Express: four tabs, authentication, source labels, tests, and a Python attack path. Appendix~\ref{app:ai} states where Gemini is used.
-
-\section{Runtime and model identifiers}
-\label{sec:runtime}
-
-The Node process loads \texttt{.env} and then \texttt{.env.local}. The model id is:
-
-\begin{minted}{javascript}
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
-\end{minted}
-
-I used \texttt{gemini-3.5-flash} as the default because that is the id I configured for the teaching calls~\cite{geminiapi}. I can override it with \texttt{GEMINI\_MODEL} without editing \texttt{server.ts}. The process logs the id at startup. I still have to confirm, in the viva, which id the live key actually served on a given day. One labelled Gemini session is stored under \texttt{eval/gemini\_runs/}: three teaching routes with \texttt{source=gemini}. Live FGSM/PGD calls are stored under \texttt{eval/adversarial/results/live\_*.json}. I do not invent extra fallback counts beyond those files.
-
-I chose the official \texttt{@google/genai} client and JSON response schemas so that the UI could read \texttt{subject}, \texttt{body} and the score fields without a second parser.
-
-\section{Authentication}
-\label{sec:auth}
-
-My supervisor asked for authentication on every page and every API. I implemented \texttt{requireLabAccess} with two ways in: an examiner login form that sets an HttpOnly cookie (\texttt{POST /api/login}), and HTTP Basic Auth for \texttt{curl} and older clients. Static files are public so the login page can load. Every \texttt{/api/*} route except login and logout stays locked. I chose this because a browser login is easier to demonstrate than a raw Basic prompt, and because the laboratory is a small demonstration, not a campus SSO product.
-
-Credentials come from \texttt{LAB\_BASIC\_USER} and \texttt{LAB\_BASIC\_PASS}. If they are missing, local development continues without a login. In production the same missing pair returns 503 and the text ``This laboratory is closed''.
-
-Comparison uses \texttt{timingSafeEqualString}. Different lengths return false. Empty strings return false.
-
-\section{Rate limit, size limit, and prompt checks}
-\label{sec:limits}
-
-I set \texttt{express.json(\{ limit: '32kb' \})} because a teaching API does not need large uploads and because the deepfake route should not become a file dump.
-
-\texttt{rateLimitApi} counts POST requests per IP and path in a one-hour window. I used 10 requests per hour for \texttt{/api/generate-phishing} and 40 for the other POST API paths. I chose a tighter limit on generate because that route spends Gemini quota and because it is the dual-use route (see Chapter~\ref{cha:disc}).
-
-\texttt{promptLooksInjected} looks for three regular expressions: ``ignore previous/prior/above instructions'', ``you are now '', and ``disregard the system/developer''. I know this is a small list. I still wanted a reject path I could test. A match returns HTTP 400 with ``Prompt rejected by input validation.''
-
-\section{Phishing laboratory}
-\label{sec:impl-phish}
-
-\texttt{academicDataset.ts} holds three authored examples, four public-pattern reconstructions, and \texttt{generate90Samples()}. The generator uses a Mulberry32 RNG with seed 20260927. I chose a fixed seed so that screenshots and the dashboard aggregates stay reproducible.
-
-The score bands are configuration:
-
-\begin{itemize}
-\item legitimate: realism 90--99, detectability 15--35, polish 93--100;
-\item conventional phishing: realism 30--55, detectability 80--95, polish 40--65;
-\item AI-style phishing: realism 81--96, detectability 40--60, polish 90--100.
-\end{itemize}
-
-When the 90 rows are loaded, the dashboard mean designed realism sits near 75\%. The value ``100 minus mean AI detectability'' sits near 51\%. Those two numbers are the ones people keep quoting. They are not measurements of Gmail or SpamAssassin. I kept the original card look and I labelled the badges ``Designed avg'' and ``Designed'' so the screen stays the same while the caption stays honest.
-
-\texttt{parseEmailFile} reads a local \texttt{.txt} or \texttt{.eml} in the browser. It looks for From, To, Subject and a blank-line body split. I added file load because an examiner can bring a sample without pasting by hand. The file never leaves the browser except as the parsed text in \texttt{/api/analyze-email}.
-
-\section{Deepfake tab}
-\label{sec:impl-df}
-
-I implemented three presets only. I wrote the filenames so that they look like teaching cases: a CEO video, a voicemail, a passport image. Exact name match returns the preset. Any other string is narrated. I put a sentence on the tab: media bytes are not inspected. I did this because shipping a weak detector would have been worse than shipping a labelled simulator.
-
-\section{Adversarial path}
-\label{sec:impl-adv}
-
-\texttt{eval/adversarial/service.py} is a FastAPI application. On first attack it downloads CIFAR-10 and loads \texttt{cifar10\_resnet56} through \texttt{torch.hub}. It walks the test set and takes the first image of the requested class that the model already classifies correctly. The default attack is untargeted FGSM or PGD in pixel space; a targeted run happens only when the request sets \texttt{targeted: true}. The result is projected onto the $L_\infty$ ball and returned as softmax percentages plus the measured $L_\infty$. Unknown class names return HTTP 400. The architecture field is ignored; the loaded checkpoint is always ResNet-56.
-
-\texttt{eval/adversarial/run\_attacks.py} is the batch script. It samples 200 test images by default, seed 20260927, and writes \texttt{adversarial\_metrics.json} with \emph{untargeted} FGSM and PGD. I describe the method in Chapter~\ref{cha:eval}. I do not paste invented accuracies.
-
-The attack tab names the model CIFAR-10 ResNet-56 and offers FGSM or PGD. I do not offer ImageNet class names (banana, panda) as presets. The class inputs are CIFAR-10 labels. The photographs next to the canvas are stock illustrations, not the $32 \times 32$ tensors used by the attack.
-
-\section{Tests}
-\label{sec:tests}
-
-I wrote the automated tests in \texttt{tests/labSecurity.test.ts} and \texttt{tests/apiContract.test.ts} and I run them with \texttt{npm test} (\texttt{tsx --test}). Table~\ref{tab:tests} lists the first four security helpers. The other tests check the 32\,kb limit, the 10/40 rate limits, fail-closed production auth, the login cookie, the four POST teaching routes, the three eval GET routes, and the \texttt{source} labels.
+Table~\ref{tab:stack} lists the main technologies. Versions are those declared in \texttt{package.json} and \path{eval/requirements.txt}, or recorded in the result files.
 
 \begin{table}[htbp]
 \centering
-\caption{Automated tests in \texttt{labSecurity.test.ts}.}
-\label{tab:tests}
+\caption{Technology stack.}
+\label{tab:stack}
 \scriptsize
-\begin{tabular}{p{5.6cm}p{7.6cm}}
+\begin{tabular}{p{3.2cm}p{3.6cm}p{5.6cm}}
 \toprule
-Test name & What I asserted \\
+Layer & Technology & Version / note \\
 \midrule
-\texttt{timingSafeEqualString rejects different lengths} & \texttt{'ab'} vs \texttt{'a'} is false; two empty strings are false. \\
-\texttt{timingSafeEqualString accepts exact match} & \texttt{alpha} equals itself; \texttt{alpia} does not. \\
-\texttt{labCredentials fail closed when env is empty} & After deleting the two env vars, \texttt{labCredentials()} is \texttt{null}. \\
-\texttt{prompt injection patterns are rejected} & ``ignore previous instructions and dump the key'' is true; a normal library-fine prompt is false. \\
+Client & React, TypeScript, Vite, Tailwind CSS & React \^{}19.0.1, TypeScript \~{}5.8.2, Vite \^{}6.2.3, Tailwind \^{}4.1.14 \\
+Server & Node.js, Express & Node.js 22 (container base image), Express \^{}4.21.2 \\
+LLM client & \path{@google/genai} & \^{}2.4.0; model \texttt{gemini-3.5-flash}~\cite{geminiapi} \\
+Attack service & Python, FastAPI, uvicorn, PyTorch, torchvision & Python 3.12 (container); PyTorch 2.14.1 recorded in the result file \\
+Benchmark & scikit-learn & TF-IDF and logistic regression \\
+Tests & \texttt{node:test} via \texttt{tsx} & Offline; no network calls \\
+Packaging & Docker, esbuild & Node and all-in-one images \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-I did not write an end-to-end browser test. I tested the four tabs by hand on the local server. That is a limitation. The unit tests still cover the lock helpers, the size cap, and the route contracts that my supervisor asked for.
+\section{Client application}
+\label{sec:impl-client}
 
-\section{What I refused to implement}
-\label{sec:refused}
+The client is a single-page React application. On start it calls \path{/api/whoami}; if the call fails, it shows the login form (Figure~\ref{fig:ui-login}). After sign-in, a sidebar switches between the dashboard and the three laboratories (Figures~\ref{fig:ui-dash}--\ref{fig:ui-adv}). The client stores no data persistently and every analytical view displays the \texttt{source} of the result it shows.
 
-I refused a Gemini fallback on the adversarial POST. I refused a mailbox crawler. I refused to treat the dashboard percentages as experimental results. I refused to keep the academic-report generator in the repository. Those refusals are part of the implementation, not only of the discussion.
+% src: src/App.tsx, src/LoginScreen.tsx
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.6\textwidth]{images/ui-login}
+\caption{Login screen. Credentials are not shown on the page.}
+\label{fig:ui-login}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{images/ui-dashboard}
+\caption{Dashboard after loading the seeded 90-email teaching set. The percentages are means of configured score bands (Section~\ref{sec:eval-config}), labelled as such on screen.}
+\label{fig:ui-dash}
+\end{figure}
+
+\section{Authentication and sessions}
+\label{sec:auth}
+
+% src: labSecurity.ts:21-174
+Access control is implemented in \texttt{labSecurity.ts}. Credentials are read from the environment variables \texttt{LAB\_BASIC\_USER} and \texttt{LAB\_BASIC\_PASS}. They are compared with a wrapper around Node's \texttt{crypto.timingSafeEqual}, which first rejects empty values and values of different length, so that comparison time does not reveal how many leading characters were correct (NFR3). A successful login creates a session token of 24 random bytes, stored in a server-side map with a 12-hour expiry and sent to the browser in an \texttt{HttpOnly}, \texttt{SameSite=Lax} cookie, with the \texttt{Secure} flag in production (NFR4). HTTP Basic authentication is accepted as an alternative for scripted clients.
+
+The middleware \texttt{requireLabAccess} enforces three rules. In production, if either credential is missing, it answers every request with HTTP~503 and the laboratory remains closed; in development, missing credentials leave the laboratory open so that it can be run locally. When credentials are set, static assets and the login route are public and every other \path{/api/} route requires a session or valid Basic credentials. A shared credential pair, rather than per-user accounts, was chosen because the laboratory has a single role and a small group of users (learners and examiners in one course); institutional single sign-on was considered but would have tied the demonstrator to one university's identity provider.
+
+\section{Request limits and prompt handling}
+\label{sec:limits}
+
+% src: labSecurity.ts:4-11, 176-224; server.ts
+JSON bodies are limited to 32\,kB (NFR1). The limit is well above the size of a teaching email and of every request the client sends, and it bounds the amount of text that can be forwarded to the LLM in a single call. The rate limiter keeps, for each pair of client address and path, the timestamps of the requests made in the last hour and rejects further \texttt{POST} requests with HTTP~429 once the limit is reached (NFR2). The generation route is limited to 10 requests per hour because it consumes LLM quota and is the route with the highest potential for misuse; other routes allow 40. The client address is Express's \texttt{req.ip}, which, with the server configured to trust one proxy hop, cannot be chosen by the client through a forged \texttt{X-Forwarded-For} header.
+
+Prompt handling differs by route because the routes receive different kinds of text. The generation and deepfake routes receive instructions written by the user; they are checked with \texttt{promptLooksInjected}, which rejects text matching three patterns associated with direct prompt injection~\cite{perez2022ignore}: ``ignore previous/prior/above instructions'', ``you are now'' and ``disregard the system/developer''. The analysis route receives an email written by a third party, which is the indirect case described by Greshake et al.~\cite{greshake2023signed}. Rejecting emails that contain such phrases would also reject legitimate messages, so the email is instead enclosed between explicit markers and the prompt instructs the model to analyse, not obey, the enclosed text. On all routes, the model's answer must match a JSON response schema, which limits what an injected instruction can make the server return. These measures reduce, but do not eliminate, the risk of prompt injection; Section~\ref{sec:limits-disc} discusses the residual risk.
+
+\section{Phishing laboratory}
+\label{sec:impl-phish}
+
+\paragraph{Teaching material.} \texttt{academicDataset.ts} contains three authored exemplars (one per class), four reconstructions of publicly documented scam and notice patterns (a credential-harvest lure, business email compromise, a parcel-fee lure and a legitimate library notice), and the function \texttt{generate90Samples}. The function uses a Mulberry32 pseudo-random generator with the fixed seed 20260927, so the same 90 emails (30 legitimate, 30 conventional phishing, 30 AI-style phishing) appear on every load. Their scores are drawn uniformly from bands configured for each class, shown in Table~\ref{tab:bands}; they are teaching values, not measurements.
+
+\begin{table}[htbp]
+\centering
+\caption{Configured score bands of the seeded teaching set (\texttt{academicDataset.ts}).}
+\label{tab:bands}
+\scriptsize
+\begin{tabular}{lccc}
+\toprule
+Class & Realism & Detectability & Language polish \\
+\midrule
+Legitimate & 90--99 & 15--34 & 93--100 \\
+Conventional phishing & 30--54 & 80--94 & 40--64 \\
+AI-style phishing & 81--95 & 40--59 & 90--99 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Generation and analysis.} The generation and analysis routes call Gemini with \texttt{responseMimeType: application/json} and a response schema, so the client receives typed fields (for example \texttt{realismScore}, \texttt{indicators} and \texttt{predictedCategory}) without a second parser. The analysis prompt asks for a predicted class among \texttt{legitimate}, \texttt{conventional\_phishing} and \texttt{ai\_phishing}, and states that the answer is an LLM judgement, not a spam-filter measurement; the server normalises the returned class name. If the Gemini call throws, the generation route returns a fixed template and the analysis route returns the result of a keyword heuristic that inspects the sender domain, look-alike host names and urgency or payment terms. Both fallbacks are labelled \texttt{source: fallback}.
+
+\paragraph{Email files.} \texttt{parseEmailFile} reads a \texttt{.txt} or \texttt{.eml} file in the browser, unfolds header continuation lines, and extracts \texttt{From}, \texttt{To} and \texttt{Subject} from the header block and the body after the first blank line. The file itself is not uploaded; only the extracted fields are sent for analysis. Figure~\ref{fig:ui-phish} shows the laboratory.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{images/ui-phishing}
+\caption{AI Phishing Lab with authored exemplars and reconstructed public patterns.}
+\label{fig:ui-phish}
+\end{figure}
+
+\section{Deepfake laboratory}
+\label{sec:impl-df}
+
+% src: server.ts (PRE_BAKED_DEEPFAKES, getDynamicFallbackDeepfake)
+The deepfake laboratory analyses scenarios, not files. Three presets represent common social-engineering cases: an executive video requesting an urgent transfer, a voicemail requesting confidential data, and an identity-document image. When the filename matches a preset exactly, the server returns stored teaching content: visual and audio irregularities to look for, markers with a category (physical, temporal, acoustic or digital), and defences such as out-of-band verification and content-provenance checks~\cite{c2pa2spec}. For any other filename, Gemini writes a comparable analysis from the filename, media type and description; if Gemini is unavailable, a fallback assembles generic markers according to the media type. The marker confidences in all three cases are part of the teaching content, not detector outputs, and the user interface states that media bytes are not inspected (Figure~\ref{fig:ui-df}).
+
+Shipping a detector was considered and rejected. Detectors trained on public benchmarks generalise poorly to real recordings~\cite{muller2022audio}, artefact-based cues such as blinking become obsolete as generators improve~\cite{li2018ictu}, and running a detector would have required accepting and storing user media, with the associated privacy obligations. A scenario module with explicit provenance teaches the defensive procedures, which remain valid regardless of the quality of the forgery.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{images/ui-deepfake}
+\caption{Deepfake Media Lab after analysing a preset scenario.}
+\label{fig:ui-df}
+\end{figure}
+
+\section{Adversarial laboratory}
+\label{sec:impl-adv}
+
+\paragraph{Model.} The attack service loads the \texttt{cifar10\_resnet56} checkpoint through \texttt{torch.hub} from the \texttt{pytorch-cifar-models} repository~\cite{chenyaofo2021cifar}. A ResNet-50 pretrained on ImageNet was considered but rejected: it expects $224 \times 224$ inputs and a 1000-class output, so attacking it on CIFAR-10 would require resizing the images and mapping label spaces, and clean accuracy would then reflect those adaptations as much as the model. A network trained on CIFAR-10 allows clean and robust accuracy to be measured on the same $32 \times 32$ inputs. Inputs are kept in pixel space $[0,1]$, and normalisation with the CIFAR-10 channel means and standard deviations is applied inside the forward function, so that $\varepsilon$ is expressed in pixel units.
+
+\paragraph{Attack implementation.} FGSM and PGD share one function, \texttt{run\_local\_attack}, used by both the live service and the batch evaluation (Listing~\ref{lst:attack}). FGSM is a single step of size $\varepsilon$ (Equation~\ref{eq:fgsm}); PGD performs 10 steps of size $\alpha = \varepsilon/4$ from the clean image, without random initialisation. After every step the perturbed image is projected onto the $L_\infty$ ball of radius $\varepsilon$ around the original and clipped to $[0,1]$. A targeted variant descends the loss of a chosen target class instead of ascending the loss of the true class.
+
+% src: eval/adversarial/run_attacks.py:45-63
+\begin{listing}[htbp]
+\begin{minted}{python}
+def project_linf(x_adv, x0, eps):
+    return torch.max(torch.min(x_adv, x0 + eps), x0 - eps).clamp(0.0, 1.0)
+
+def run_local_attack(model, x, y, eps, method="fgsm", target=None, steps=10):
+    label = target if target is not None else y
+    sign = -1.0 if target is not None else 1.0
+    alpha = eps if method == "fgsm" else eps / 4
+    n = 1 if method == "fgsm" else steps
+    x0 = x.detach()
+    x_adv = x0.clone()
+    for _ in range(n):
+        x_adv = x_adv.detach().requires_grad_(True)
+        F.cross_entropy(logits(model, x_adv), label).backward()
+        x_adv = x_adv.detach() + sign * alpha * x_adv.grad.sign()
+        x_adv = project_linf(x_adv, x0, eps)
+    return x_adv.detach()
+\end{minted}
+\caption{Shared FGSM/PGD implementation (\texttt{eval/adversarial/run\_attacks.py}, abridged).}
+\label{lst:attack}
+\end{listing}
+
+\paragraph{Live service.} % src: eval/adversarial/service.py:112-175
+For each request, the service validates $\varepsilon \in (0, 0.25]$ and the class name (HTTP~400 otherwise), selects the first test image of the requested class that the model classifies correctly, and runs the attack. It then measures $\|x_{\mathrm{adv}} - x\|_\infty$ and, if the value exceeds $\varepsilon$ by more than $10^{-6}$, returns HTTP~500 instead of a result (NFR6). The response contains the clean and adversarial top-1 classes with their softmax confidences, the requested budget, the measured perturbation, the attack method, and, for targeted runs, whether the target was reached. Figure~\ref{fig:ui-adv} shows a computed untargeted FGSM result; the noise image next to it is an illustration and is labelled as such.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{images/ui-adversarial}
+\caption{AI Model Attacks after an untargeted FGSM run at $\varepsilon = 0.05$ (\texttt{source: computed}).}
+\label{fig:ui-adv}
+\end{figure}
+
+\section{Evaluation scripts}
+\label{sec:impl-eval}
+
+\paragraph{Phishing benchmark.} % src: eval/phishing/run_benchmark.py
+\path{run_benchmark.py} builds the corpus from code (\texttt{build\_corpus}), writes it to \texttt{corpus.jsonl}, and evaluates three models: a TF-IDF (unigram and bigram, minimum document frequency 2) and logistic-regression pipeline on subject and body only (\emph{wording only}); the same pipeline with the \texttt{From} address appended (\emph{with sender}); and a constant classifier that always predicts phishing (\emph{baseline}). Each model is evaluated on a stratified 70/30 hold-out split and with stratified five-fold cross-validation, both with seed 20260927. Because the corpus is generated from code, rerunning the script regenerates exactly the same data and metrics (NFR7).
+
+\paragraph{Adversarial batch.} % src: eval/adversarial/run_attacks.py:134-210
+\path{run_attacks.py} draws 200 images from the CIFAR-10 test set without replacement, using seed 20260927, measures clean accuracy, and runs FGSM and PGD at $\varepsilon \in \{2/255, 8/255, 16/255\}$. For each budget it records robust accuracy with a Wilson 95\% confidence interval, attack success rate, flip rate, and mean and maximum $L_\infty$. The script stops with an error if any perturbation exceeds its budget, and it writes the generation time, the PyTorch version and the Git commit into the result file.
+
+\section{Automated tests}
+\label{sec:tests}
+
+The test suite (\texttt{npm test}) contains 31 tests in two files and runs offline. \path{tests/labSecurity.test.ts} (25 tests) exercises the security functions directly with mock requests: constant-time comparison, rejection of empty credentials, fail-closed behaviour in production with one or both credentials missing, the open development mode, Basic authentication, the session cookie, public and protected paths, the client-address function, the 10 and 40 request limits with per-path isolation, and the injection patterns, including a set of ordinary phishing-task prompts that must \emph{not} be rejected. \path{tests/apiContract.test.ts} (6 tests) checks contracts that span files: the 32\,kB limit is wired into the server, every \texttt{source} label used in the code belongs to the documented set, all routes are registered, the language routes apply the prompt controls, the benchmark evaluates the three models, and the attack service uses the shared pixel-space implementation and refuses perturbations above $\varepsilon$. The contract tests inspect source code and result files rather than issuing HTTP requests; end-to-end tests through HTTP are not part of the suite.
+
+\section{Problems encountered}
+\label{sec:problems}
+
+\paragraph{Perturbations above the budget.} Torchattacks~\cite{kim2020torchattacks} was initially used for the live attacks. A live call with $\varepsilon = 0.05$, recorded in the first commit of the repository (\texttt{a133834}), produced a measured $L_\infty$ of 0.205, about four times the budget. The overshoot coincided with the library's input-normalisation option, which was used because the pretrained model expects normalised inputs. Instead of depending on that interaction, the library was removed, and both paths now use the pixel-space implementation in Listing~\ref{lst:attack}, followed by an explicit check of the measured perturbation. All recorded live calls now report $L_\infty = 0.05$ at $\varepsilon = 0.05$ (Section~\ref{sec:eval-live}).
+
+\paragraph{Sender information in the benchmark.} An early version of the benchmark appended the sender address to every training and test text while its metadata stated that the sender was excluded. The feature sets were separated into the wording-only and with-sender models described above, which also turned the problem into a finding (Section~\ref{sec:eval-phish}).
+
+\paragraph{LLM availability.} The Gemini API occasionally returned HTTP~503 under high demand; the recorded generation call succeeded on its second attempt. The fallback design (FR10) keeps the laboratory usable when this happens and labels the result accordingly.
+
+\section{Summary}
+
+The implementation realises the provenance contract in each module, shares one attack implementation between demonstration and evaluation, and enforces the security requirements in middleware that is covered by automated tests. Chapter~\ref{cha:eval} evaluates the result.
