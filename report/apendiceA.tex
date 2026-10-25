@@ -1,7 +1,7 @@
 \chapter{Declaration on the use of generative AI}
 \label{app:ai}
 
-This appendix declares every use of generative AI in this project, both as a component of the laboratory and as a tool in producing the software and this report. The use of AI tools in the report is permitted by the rules of the programme, provided that it is declared.
+This appendix declares every use of generative AI in this project, both as a component of the laboratory and as a tool in producing the software, the evaluation material and this report. The use of AI tools in the report is permitted by the rules of the programme, provided that it is declared.
 
 \section{Generative AI as a component of the laboratory}
 \label{sec:ai-component}
@@ -12,12 +12,12 @@ The laboratory calls the Gemini API~\cite{geminiapi} on three routes: phishing g
 \label{sec:ai-tools}
 
 \begin{itemize}
-\item \textbf{Claude (Anthropic)} was used during the final revision of the project. It reviewed the code and the evaluation scripts for errors, proposed the changes to the phishing benchmark (separate wording-only and with-sender models, cross-validation and a trivial baseline), to the attack service (shared pixel-space attack, verified $L_\infty$ bound) and to the request handling (client address, prompt handling), verified the bibliographic references against their sources, searched for additional literature, and drafted the text of Chapters~\ref{cha:intro}--\ref{cha:conc}, the abstract and these appendices from the code, the result files and the decisions of the author.
+\item \textbf{Claude (Anthropic)} was used during the final revision of the project. It reviewed the code and the evaluation scripts for errors; proposed and implemented, under the author's review, the changes to the phishing benchmark (separate wording-only and with-sender models, cross-validation on random folds and grouped by sender domain, a trivial baseline, and the correction of the corpus-regeneration error), to the attack service (shared pixel-space attack, verified $L_\infty$ bound) and to the request handling (client address, failed-sign-in limit, prompt handling, client-side display of provenance labels); carried out the literature searches and verified the bibliographic references against their sources; and drafted the text of Chapters~\ref{cha:intro}--\ref{cha:conc}, the Resumo and the Abstract, and these appendices from the code, the result files and the decisions of the author.
 \item \textbf{Cursor} (an AI-assisted code editor) was used to write and modify parts of the application code.
-\item \todo{Add any other AI tool used during development (for example the tool used to create the first version of the application), with what it was used for.}
+\item \todo{State how the 187-email benchmark corpus in \texttt{eval/phishing/run\_benchmark.py} was authored (by the author, or with which AI tool), and add any other AI tool used during development, for example the tool used to create the first version of the application, with what it was used for.}
 \end{itemize}
 
 \section{Responsibility of the author}
 \label{sec:ai-author}
 
-The author defined the problem, the scope, the requirements and the design decisions described in this report, including the provenance contract, the exclusion of media processing and mail sending, the choice of the CIFAR-10 model and the security controls. The author ran the evaluation scripts that produced the result files, checked every number in Chapter~\ref{cha:eval} against those files, and reviewed and corrected all AI-drafted text. AI tools did not produce any result reported in this document: all results come from the scripts in the repository and can be regenerated as described in Appendix~\ref{app:eval}.
+The author defined the problem, the scope, the requirements and the design decisions described in this report, including the provenance contract, the exclusion of media processing and mail sending, the choice of the CIFAR-10 model and the security controls. The author ran the evaluation scripts that produced the adversarial result files, reviewed every change made with AI assistance, checked the numbers in Chapter~\ref{cha:eval} against the result files, and reviewed and corrected all AI-drafted text. No AI tool produced any result reported in this document: all results come from the scripts in the repository and can be regenerated as described in Appendix~\ref{app:eval}.

@@ -36,7 +36,7 @@ Chapter~\ref{cha:conc} revisits each objective and states whether it was met.
 Three research questions guide the work. Each is given an evaluation criterion so that it can be answered from the evidence produced.
 
 \begin{description}
-\item[RQ1] Within a controlled, reconstructed corpus of institutional emails, how much does the message wording, as opposed to the sender address, contribute to separating phishing from legitimate mail? \emph{Criterion:} cross-validated F1 and AUC of a wording-only and a with-sender classifier, compared with an always-phishing baseline.
+\item[RQ1] Within a constructed corpus of institutional emails, how much does the message wording, as opposed to the sender address, contribute to separating phishing from legitimate mail? \emph{Criterion:} cross-validated F1 and AUC of a wording-only and a with-sender classifier, on random folds and on folds with unseen sender domains, compared with an always-phishing baseline.
 \item[RQ2] How can a deepfake module support awareness teaching without processing media, and what are the limits of that design? \emph{Criterion:} a design that labels every output as preset, LLM narration or fallback, and an explicit statement of what such a design cannot show.
 \item[RQ3] How vulnerable is an undefended, pretrained CIFAR-10 classifier to FGSM and PGD under common $L_\infty$ budgets? \emph{Criterion:} robust accuracy with 95\% confidence intervals and attack success rate at $\varepsilon \in \{2/255, 8/255, 16/255\}$, with every perturbation verified to satisfy $\|\delta\|_\infty \le \varepsilon$.
 \end{description}
@@ -44,14 +44,14 @@ Three research questions guide the work. Each is given an evaluation criterion s
 \section{Scope and delimitations}
 \label{sec:scope}
 
-The laboratory is an educational demonstrator, not a production detector. It does not send email, does not harvest mailboxes, and does not inspect uploaded media files: the deepfake module reasons over a filename, a media type and a textual description. The phishing benchmark uses a corpus written for this work, not real user mail, and its results describe that corpus only. The adversarial evaluation uses one pretrained model on CIFAR-10~\cite{krizhevsky2009cifar} and does not evaluate defences. No study with learners was carried out; the educational effect of the laboratory is therefore not measured in this report.
+The laboratory is an educational demonstrator, not a production detector. It does not send email, does not harvest mailboxes, and does not inspect uploaded media files: the deepfake module reasons over a filename, a media type and a textual description. The phishing benchmark uses a corpus constructed for this work, not real user mail, and its results describe that corpus only. The adversarial evaluation uses one pretrained model on CIFAR-10~\cite{krizhevsky2009cifar} and does not evaluate defences. No study with learners was carried out; the educational effect of the laboratory is therefore not measured in this report.
 
 \section{Methodology}
 \label{sec:method}
 
 The work follows an iterative engineering approach with a technical evaluation. Requirements were derived from the problem statement, from feedback received during development and from a STRIDE threat analysis~\cite{shostack2014threat}, and were refined as the implementation progressed. The resulting artefact was evaluated in three ways: (i) automated unit and contract tests of the security controls; (ii) a reproducible text-classification benchmark on a reconstructed corpus, reported with five-fold cross-validation and a trivial baseline; and (iii) a reproducible batch of adversarial attacks on 200 CIFAR-10 test images, reported with Wilson confidence intervals. Every number reported in Chapter~\ref{cha:eval} is read from a result file in the repository, together with the commit that produced it.
 
-Related work was identified through targeted searches of peer-reviewed venues and preprint servers (ACM Digital Library, IEEE Xplore, arXiv, proceedings of ICLR, ICML, SOUPS and Interspeech), official standards (IETF RFCs) and official technical documentation, using the terms \emph{LLM phishing}, \emph{phishing email detection}, \emph{deepfake detection}, \emph{adversarial robustness evaluation}, \emph{prompt injection} and \emph{anti-phishing training}. Each source was checked against its publisher or index page before being cited.
+Related work was identified through targeted searches of peer-reviewed venues and preprint servers (ACM Digital Library, IEEE Xplore, arXiv, proceedings of ICLR, ICML, SOUPS and Interspeech), official standards (IETF RFCs) and official technical documentation, using the terms \emph{LLM phishing}, \emph{phishing email detection}, \emph{deepfake detection}, \emph{adversarial robustness evaluation}, \emph{prompt injection} and \emph{anti-phishing training}. The searches and the checking of each source against its publisher or index page were carried out with the assistance of an AI tool, as declared in Appendix~\ref{app:ai}.
 
 \section{Contributions}
 \label{sec:contrib}
@@ -62,8 +62,8 @@ The contributions of this work are:
 \item \textbf{InsightFlow AI}, a React and Express web laboratory with a separate Python attack service, which places AI-generated phishing, deepfake scenarios and adversarial attacks in one authenticated workflow (O1).
 \item \textbf{A provenance contract}: every successful analytical response carries a \texttt{source} field, enforced by automated tests, and the adversarial route returns HTTP~503 rather than an invented value when its service is unavailable (O2).
 \item \textbf{A reproducible adversarial evaluation} of a pretrained CIFAR-10 ResNet-56 under FGSM and PGD at three $L_\infty$ budgets, with confidence intervals and verified perturbation bounds, sharing its attack implementation with the live laboratory (O3).
-\item \textbf{A reproducible phishing benchmark} that separates wording-only from with-sender features and compares both with a trivial baseline, showing that on the reconstructed corpus the discriminative signal lies in the sender, not the wording (O4).
-\item \textbf{A security design for an LLM-backed teaching tool}: fail-closed authentication, rate and size limits, prompt-injection mitigations, a STRIDE analysis and 31 automated tests (O5).
+\item \textbf{A reproducible phishing benchmark} that separates wording-only from with-sender features, compares both with a trivial baseline and controls for memorised sender domains, showing that on the constructed corpus wording alone does not beat the baseline and that the sender's advantage depends largely on known domains (O4).
+\item \textbf{A security design for an LLM-backed teaching tool}: fail-closed authentication, rate and size limits, prompt-injection mitigations, a STRIDE analysis and 34 automated tests (O5).
 \end{itemize}
 
 \section{Structure of the report}

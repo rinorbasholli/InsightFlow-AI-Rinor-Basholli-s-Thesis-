@@ -34,7 +34,7 @@ Three alternatives were considered. A notebook-based design (one notebook per ri
 \section{Deployment}
 \label{sec:deploy}
 
-The repository supports two deployment configurations. In development, \texttt{npm run dev} starts Express with the Vite middleware on port 3000, and the attack service is started separately on port 8001. For production, a container image is built from \texttt{Dockerfile}: it compiles the client with Vite, bundles the server with esbuild, and runs \texttt{node dist/server.cjs} with \texttt{NODE\_ENV=production} on port 8080 (NFR10). A second image, \path{deploy/Dockerfile.all-in-one}, adds Python 3.12 and PyTorch and starts both processes in one container, so that the adversarial module is available in a single deployment. The script \path{deploy/start-live-lab.sh} reproduces this configuration locally and refuses to start when the access credentials are missing.
+The repository supports two deployment configurations. In development, \texttt{npm run dev} starts Express with the Vite middleware on port 3000, and the attack service is started separately on port 8001. For production, a container image is built from \texttt{Dockerfile}: it compiles the client with Vite, bundles the server with esbuild, and runs \texttt{node dist/server.cjs} with \texttt{NODE\_ENV=production} on port 8080 (NFR10). A second image, \path{deploy/Dockerfile.all-in-one}, adds Python 3.12 and PyTorch and starts both processes in one container, so that the adversarial module is available in a single deployment. The script \path{deploy/start-live-lab.sh} reproduces this configuration locally and refuses to start when the access credentials are missing. When a platform places a reverse proxy in front of the container, \texttt{TRUST\_PROXY=1} must be set so that rate limiting uses the client's address rather than the proxy's.
 
 Sessions and rate-limit counters are kept in process memory (Section~\ref{sec:arch-sec}). The design therefore assumes a \emph{single instance} of the server. If a hosting platform runs several instances behind a load balancer, each instance holds its own sessions and counters, so a user may be asked to sign in again and the effective rate limit is multiplied by the number of instances. Section~\ref{sec:limits-disc} lists this as a limitation.
 
@@ -48,7 +48,7 @@ Table~\ref{tab:components} maps the components to the repository.
 \caption{Components and their location in the repository.}
 \label{tab:components}
 \scriptsize
-\begin{tabular}{p{3.4cm}p{4.0cm}p{5.0cm}}
+\begin{tabular}{P{3.4cm}P{4.0cm}P{5.0cm}}
 \toprule
 Component & Location & Responsibility \\
 \midrule
@@ -106,7 +106,7 @@ labelOrigin: dataset $|$ known-sample $|$ llm $|$ fallback
 \caption{Evaluation artefacts and their main fields.}
 \label{tab:artefacts}
 \scriptsize
-\begin{tabular}{p{5.0cm}p{7.4cm}}
+\begin{tabular}{P{5.0cm}P{7.4cm}}
 \toprule
 File & Main fields \\
 \midrule
@@ -192,14 +192,14 @@ Table~\ref{tab:api} specifies the HTTP interface. All routes except \texttt{POST
 \caption{HTTP API of the Express server.}
 \label{tab:api}
 \scriptsize
-\begin{tabular}{p{3.6cm}p{3.6cm}p{5.2cm}}
+\begin{tabular}{P{3.6cm}P{3.6cm}P{5.2cm}}
 \toprule
 Route & Request & Response \\
 \midrule
-\texttt{POST /api/login} & \texttt{username}, \texttt{password} & 200 and session cookie; 401 on mismatch \\
+\texttt{POST /api/login} & \texttt{username}, \texttt{password} & 200 and session cookie; 401 on mismatch; 429 after repeated failures \\
 \texttt{POST /api/logout} & --- & 200; cookie cleared \\
 \texttt{GET /api/whoami} & --- & Current user \\
-\texttt{POST /api/generate-phishing} & \texttt{scenario}, \texttt{promptText}, \texttt{customPrompt}, \texttt{complexity} & \texttt{\{success, source, email\}}; 400 if the prompt is rejected \\
+\texttt{POST /api/generate-phishing} & \texttt{scenario}, \texttt{promptText}, \texttt{customPrompt}, \texttt{complexity} & \texttt{\{success, source, email\}}; 400 if a prompt field is rejected \\
 \texttt{POST /api/analyze-email} & \texttt{subject}, \texttt{body}, \texttt{sender} & \texttt{\{success, source, analysis\}} with scores, indicators, mitigations, \texttt{predictedCategory}, \texttt{categoryRationale} \\
 \texttt{POST /api/analyze-media-deepfake} & \texttt{fileName}, \texttt{mediaType}, \texttt{promptAnalysis} & \texttt{\{success, source, deepfakeAnalysis\}}; 400 if the prompt is rejected \\
 \texttt{POST /api/adversarial-perturb} & \texttt{originalClass}, \texttt{targetClass}, \texttt{noiseLevel}, \texttt{method}, \texttt{targeted} & \texttt{\{success, source: computed, perturbation\}}; 502 if the service rejects the request; 503 if it is unreachable \\
@@ -215,7 +215,7 @@ The attack service exposes \texttt{GET /health}, \texttt{GET /summary} and \text
 \section{Security controls in the request path}
 \label{sec:arch-sec}
 
-Every request passes three middleware functions before reaching a route: the JSON body limit, \texttt{requireLabAccess} and \texttt{rateLimitApi}. \texttt{requireLabAccess} fails closed: in production, if either credential is missing, every request receives HTTP~503. Static assets and the login page are public so that the login form can render; every API route except login and logout is protected. Rate-limit counters are keyed by client address and path, where the client address is taken from Express's \texttt{req.ip}, which honours exactly one trusted proxy hop. The language routes add prompt-level controls described in Section~\ref{sec:limits}. Section~\ref{sec:stride} relates these controls to the STRIDE threat categories.
+Every request passes three middleware functions before reaching a route: the JSON body limit, \texttt{requireLabAccess} and \texttt{rateLimitApi}. \texttt{requireLabAccess} fails closed: in production, if either credential is missing, every request receives HTTP~503. Static assets and the login page are public so that the login form can render; every API route except login and logout is protected. Rate-limit counters are keyed by client address and path, where the client address is taken from Express's \texttt{req.ip}. By default no proxy is trusted, so \texttt{req.ip} is the socket peer; when the laboratory runs behind a reverse proxy, the environment variable \texttt{TRUST\_PROXY} is set to the number of trusted proxy hops. Failed sign-in attempts are counted per client address as well. The language routes add prompt-level controls described in Section~\ref{sec:limits}. Section~\ref{sec:stride} relates these controls to the STRIDE threat categories.
 
 \section{Summary}
 

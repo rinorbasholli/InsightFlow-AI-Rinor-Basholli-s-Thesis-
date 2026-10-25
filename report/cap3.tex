@@ -57,21 +57,21 @@ Table~\ref{tab:fr} lists the functional requirements, prioritised with the MoSCo
 \caption{Functional requirements.}
 \label{tab:fr}
 \scriptsize
-\begin{tabular}{p{0.7cm}p{6.4cm}p{1.0cm}p{0.7cm}p{2.7cm}}
+\begin{tabular}{P{0.7cm}P{6.4cm}P{1.0cm}P{0.7cm}P{2.7cm}}
 \toprule
 ID & Requirement & Priority & Source & Realised by \\
 \midrule
 FR1 & Require authentication for every API call when credentials are configured, and refuse to serve the laboratory in production when they are not. & Must & T & \texttt{labSecurity.ts} \\
-FR2 & Generate a teaching phishing email from a scenario, a topic, optional instructions and a complexity level. & Must & P & \texttt{POST /api/generate-phishing} \\
-FR3 & Analyse a subject, a body and an optional sender, and return scores, indicators, mitigations and a predicted class with a rationale. & Must & P & \texttt{POST /api/analyze-email} \\
+FR2 & Generate a teaching phishing email from a scenario, a topic, optional instructions and a complexity level. & Must & P & \path{/api/generate-phishing} \\
+FR3 & Analyse a subject, a body and an optional sender, and return scores, indicators, mitigations and a predicted class with a rationale. & Must & P & \path{/api/analyze-email} \\
 FR4 & Accept a local \texttt{.txt} or \texttt{.eml} file and extract sender, recipient, subject and body in the browser. & Should & P & \texttt{parseEmailFile} \\
 FR5 & Load a seeded, reproducible set of 90 teaching emails (30 per class) into the dashboard. & Must & P & \texttt{generate90Samples} \\
-FR6 & Analyse a deepfake \emph{scenario} from a filename, a media type and a description, without reading media content. & Must & P & \texttt{POST /api/analyze-media-deepfake} \\
+FR6 & Analyse a deepfake \emph{scenario} from a filename, a media type and a description, without reading media content. & Must & P & \path{/api/analyze-media-deepfake} \\
 FR7 & Return fixed teaching content when the filename matches one of three presets. & Should & P & \texttt{PRE\_BAKED\_DEEPFAKES} \\
-FR8 & Run FGSM or PGD on a pretrained CIFAR-10 classifier for a chosen class and budget, untargeted by default and targeted on request. & Must & P, E & \texttt{POST /api/adversarial-perturb}, \texttt{service.py} \\
+FR8 & Run FGSM or PGD on a pretrained CIFAR-10 classifier for a chosen class and budget, untargeted from the user interface and optionally targeted through the API. & Must & P, E & \path{/api/adversarial-perturb}, \texttt{service.py} \\
 FR9 & Label every successful analytical response with \texttt{source} $\in$ \{\texttt{gemini}, \texttt{fallback}, \texttt{preset}, \texttt{computed}\}. & Must & P & \texttt{server.ts}, \texttt{service.py} \\
 FR10 & Return a deterministic fallback when Gemini is unavailable on the email and deepfake routes; return HTTP~503 on the adversarial route when the attack service is unavailable. & Must & P & Route handlers \\
-FR11 & Expose the health of the attack service and the exported metric files. & Should & E & \texttt{GET /api/eval/*} \\
+FR11 & Expose the health of the attack service and the exported metric files. & Should & E & \path{/api/eval/*} \\
 FR12 & Present dashboard aggregates as configured teaching values, not as measurements. & Must & P & \path{UnifiedAnalysisDashboard.tsx} \\
 FR13 & Provide scripts that regenerate the phishing benchmark and the adversarial batch results from code. & Must & E & \path{eval/} \\
 \bottomrule
@@ -88,7 +88,7 @@ Table~\ref{tab:nfr} lists the non-functional requirements. Where possible, each 
 \caption{Non-functional requirements with measurable targets.}
 \label{tab:nfr}
 \scriptsize
-\begin{tabular}{p{0.9cm}p{2.1cm}p{6.6cm}p{0.8cm}}
+\begin{tabular}{P{0.9cm}P{2.1cm}P{6.6cm}P{0.8cm}}
 \toprule
 ID & Quality & Requirement and target & Source \\
 \midrule
@@ -102,6 +102,7 @@ NFR7 & Reproducibility & Running each evaluation script twice on the same commit
 NFR8 & Availability & The website remains usable when Gemini or the attack service is down; affected routes degrade as specified in FR10. & P \\
 NFR9 & Testability & The automated test suite runs offline, without calling Gemini, in under 10 seconds. & E \\
 NFR10 & Portability & The application can be built and run as a container image. & P \\
+NFR11 & Security & At most 10 failed sign-in attempts per client address within 15 minutes; further attempts receive HTTP~429. & T \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -116,12 +117,12 @@ Tables~\ref{tab:uc1}--\ref{tab:uc6} detail the three use cases that carry the ma
 \caption{UC1 --- Sign in.}
 \label{tab:uc1}
 \scriptsize
-\begin{tabular}{p{2.4cm}p{10.0cm}}
+\begin{tabular}{P{2.4cm}P{10.0cm}}
 \toprule
 Actor & Learner or Instructor \\
 Precondition & The Operator has set \texttt{LAB\_BASIC\_USER} and \texttt{LAB\_BASIC\_PASS}. \\
 Main flow & (1) The browser loads the login page, which is served without a session. (2) The actor submits a username and password. (3) The server compares both values in constant time. (4) The server creates a session and returns an \texttt{HttpOnly} cookie. (5) The application shows the dashboard. \\
-Alternative flows & (3a) Wrong credentials: HTTP~401, the form shows an error. (1a) Credentials not configured in production: every request receives HTTP~503 and the laboratory stays closed. (1b) Non-interactive clients may use HTTP Basic authentication instead of the cookie. \\
+Alternative flows & (3a) Wrong credentials: HTTP~401, the form shows an error; after 10 failures from the same address within 15 minutes, HTTP~429. (1a) Credentials not configured in production: every request receives HTTP~503 and the laboratory stays closed. (1b) Non-interactive clients may use HTTP Basic authentication instead of the cookie. \\
 Postcondition & Subsequent \path{/api/*} calls are accepted until the session expires or the actor signs out. \\
 \bottomrule
 \end{tabular}
@@ -132,7 +133,7 @@ Postcondition & Subsequent \path{/api/*} calls are accepted until the session ex
 \caption{UC4 --- Analyse email.}
 \label{tab:uc4}
 \scriptsize
-\begin{tabular}{p{2.4cm}p{10.0cm}}
+\begin{tabular}{P{2.4cm}P{10.0cm}}
 \toprule
 Actor & Learner; Gemini API \\
 Precondition & The actor is signed in. \\
@@ -148,12 +149,12 @@ Postcondition & The result is visible with its provenance; nothing is stored on 
 \caption{UC6 --- Run adversarial attack.}
 \label{tab:uc6}
 \scriptsize
-\begin{tabular}{p{2.4cm}p{10.0cm}}
+\begin{tabular}{P{2.4cm}P{10.0cm}}
 \toprule
 Actor & Learner or Instructor; Attack service \\
 Precondition & The actor is signed in; the Operator has started the attack service. \\
 Main flow & (1) The actor selects a CIFAR-10 class, FGSM or PGD, and a budget $\varepsilon \in (0, 0.25]$. (2) The server forwards the request to the attack service. (3) The service selects the first test image of that class that the model classifies correctly, runs an untargeted attack, and measures $\|x_{\mathrm{adv}} - x\|_\infty$. (4) The service returns the clean and adversarial predictions with their softmax confidences, the budget and the measured perturbation with \texttt{source=computed}. \\
-Alternative flows & (2a) Attack service unreachable: HTTP~503 with \texttt{source=unavailable}; no values are shown. (3a) Unknown class or budget outside the allowed range: HTTP~400. (3b) Measured perturbation exceeds $\varepsilon$: HTTP~500; no result is returned. (1a) A request with \texttt{targeted: true} runs a targeted attack towards a second class and reports whether the target was reached. \\
+Alternative flows & (2a) Attack service unreachable: HTTP~503 with \texttt{source=unavailable}; no values are shown. (3a) Unknown class or budget outside the allowed range: the service answers HTTP~400 and the server reports HTTP~502. (3b) Measured perturbation exceeds $\varepsilon$: the service answers HTTP~500 and the server reports HTTP~502; no result is returned. (1a) Through the API only, a request with \texttt{targeted: true} runs a targeted attack towards a second class and reports whether the target was reached. \\
 Postcondition & The displayed numbers are model outputs for one image; they are distinct from the batch evaluation in Chapter~\ref{cha:eval}. \\
 \bottomrule
 \end{tabular}
@@ -166,4 +167,4 @@ The following are deliberately excluded: sending email, harvesting or storing re
 
 \section{Summary}
 
-The requirements combine teaching functions (FR2--FR8), a provenance contract (FR9, FR10, FR12), security controls derived from the threat analysis (FR1, NFR1--NFR5) and evaluation properties (FR13, NFR6, NFR7). Chapter~\ref{cha:arch} shows how the architecture realises them.
+The requirements combine teaching functions (FR2--FR8), a provenance contract (FR9, FR10, FR12), security controls derived from the threat analysis (FR1, NFR1--NFR5, NFR11) and evaluation properties (FR13, NFR6, NFR7). Chapter~\ref{cha:arch} shows how the architecture realises them.

@@ -6,7 +6,7 @@ This appendix explains how to run the laboratory and regenerate every result rep
 \section{Environment}
 \label{sec:run-env}
 
-The results were produced with Node.js~22, Python~3, PyTorch~2.14.1 (recorded in \path{adversarial_metrics.json}) and scikit-learn; the phishing results were also reproduced independently with scikit-learn~1.9.1, with byte-identical output. The adversarial results were produced on a CPU. The CIFAR-10 test set must be present under \path{eval/adversarial/results/cifar10/}; the model weights are downloaded by \texttt{torch.hub} on first use.
+The adversarial results were produced on a CPU with PyTorch~2.14.1, as recorded in \path{adversarial_metrics.json}. The phishing result file records the Python and scikit-learn versions of its run; the phishing results were reproduced identically with Python~3.13 and scikit-learn~1.9.1. The dependencies in \path{eval/requirements.txt} are not pinned to exact versions. The batch script expects the CIFAR-10 test set under \path{eval/adversarial/results/cifar10/} and does not download it; starting the attack service once downloads it there through torchvision. The model weights are downloaded by \texttt{torch.hub} on first use.
 
 \section{Running the laboratory}
 \label{sec:run-web}
@@ -31,7 +31,7 @@ python3 -m pip install -r eval/requirements.txt
 python3 eval/phishing/run_benchmark.py
 \end{minted}
 
-The script regenerates \path{eval/phishing/corpus.jsonl} from code and writes \path{phishing_metrics.json} and \texttt{predictions.csv} under \path{eval/phishing/results/}. It does not overwrite \path{MANUAL_REVIEW.csv}.
+The script regenerates \path{eval/phishing/corpus.jsonl} from code and writes \path{phishing_metrics.json} and \texttt{predictions.csv} under \path{eval/phishing/results/}. It does not overwrite \path{MANUAL_REVIEW.csv}. The result file contains the hold-out results, five-fold cross-validation on random folds and five-fold cross-validation grouped by sender domain, together with the Git commit and library versions.
 
 \section{Adversarial batch}
 \label{sec:run-adv}
@@ -46,7 +46,7 @@ The script writes \path{eval/adversarial/results/adversarial_metrics.json}, incl
 \section{Live attack calls}
 \label{sec:run-live}
 
-With the attack service running, the recorded live calls are reproduced with:
+With the attack service running, the recorded live calls are reproduced with the following requests to the service API (targeted mode is available through the API only):
 
 \begin{minted}{text}
 curl -s -X POST localhost:8001/attack -H 'Content-Type: application/json' \
