@@ -149,9 +149,9 @@ Serves `eval/phishing/results/phishing_metrics.json` or `404` asking to run `pyt
 | non-production | missing / blank | open (local `npm run dev`) |
 | any | both set | login cookie (`POST /api/login`) **or** HTTP Basic Auth; wrong pair → **401** |
 
-Static HTML/JS is served so the login page can render. Every `/api/*` route except `/api/login` and `/api/logout` stays locked. Realm for Basic Auth: `InsightFlow AI academic laboratory`. Values are compared with `timingSafeEqualString`. Deliver the pair to Pedrosa, examiners, and the bachelor director out of band — not in this repository.
+Static HTML/JS is served so the login page can render. Every `/api/*` route except `/api/login` and `/api/logout` stays locked. Realm for Basic Auth: `InsightFlow AI academic laboratory`. Values are compared with `timingSafeEqualString`. Credentials are not stored in this repository.
 
-## Prompt injection (A7)
+## Prompt injection
 
 `promptLooksInjected` is a small denylist, not a general jailbreak defence. It is applied only to the generate-phishing user fields. Analyse-email, deepfake, and adversarial routes do not run this helper. Combined with the 32kb cap and Gemini JSON schemas, it is a teaching-lab mitigation, not a security guarantee.
 

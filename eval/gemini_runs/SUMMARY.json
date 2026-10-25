@@ -29,5 +29,5 @@
   "gemini_count": 3,
   "computed_count": 0,
   "preset_count": 0,
-  "note": "This folder is Gemini teaching-route logs only. Live FGSM/PGD calls are eval/adversarial/results/live_fgsm.json, live_pgd.json, live_fgsm_targeted.json."
+  "note": "Gemini teaching-route logs. Live FGSM/PGD calls are eval/adversarial/results/live_*.json."
 }

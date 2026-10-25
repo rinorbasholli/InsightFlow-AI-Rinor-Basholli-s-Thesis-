@@ -175,7 +175,7 @@ export default function App() {
           </div>
           <div className="text-right hidden sm:block">
             <p className="text-[9px] text-slate-500 uppercase tracking-widest font-mono">Academic session</p>
-            <p className="text-xs font-mono text-indigo-300">Student: Rinor Basholli · Mentor: Tiago Pedrosa</p>
+            <p className="text-xs font-mono text-indigo-300">Student: Rinor Basholli</p>
           </div>
         </header>
 

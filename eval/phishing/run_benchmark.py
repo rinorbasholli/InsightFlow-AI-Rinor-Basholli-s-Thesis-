@@ -2,7 +2,7 @@
 """Real phishing benchmark: TF-IDF + logistic regression on a public-style labelled set.
 
 Labels in corpus.jsonl are the public/teaching labels shipped with this repository.
-They are not Gmail verdicts. Rinor should spot-check MANUAL_REVIEW.csv before the viva.
+They are not Gmail verdicts. Spot-check MANUAL_REVIEW.csv.
 Metrics: accuracy, precision, recall, F1, AUC on ham vs phish.
 
 Corpus is reconstructed teaching data around IPB/ESTiG student-mail patterns.

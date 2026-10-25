@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import type express from 'express';
 
-/** Express JSON body cap (Pedrosa A7). Unit-tested; do not raise without a report change. */
+/** Express JSON body cap. */
 export const JSON_BODY_LIMIT = '32kb';
 
 /** Hourly per-IP cap for POST /api/generate-phishing. */
@@ -49,8 +49,7 @@ export function labCredentials(): { user: string; pass: string } | null {
 export function isPublicPath(method: string, path: string): boolean {
   if (path === '/api/login' && method === 'POST') return true;
   if (path === '/api/logout' && method === 'POST') return true;
-  // Login screen (and Vite/static assets) must load before a cookie exists.
-  // APIs stay locked. Pedrosa FR-6 is enforced on every /api/* except login.
+  // Login screen and static assets load without a session. /api/* stays locked except login/logout.
   if (!path.startsWith('/api/')) return true;
   return false;
 }

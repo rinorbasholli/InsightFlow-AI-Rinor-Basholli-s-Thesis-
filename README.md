@@ -5,7 +5,6 @@
 **AI Cybersecurity Risk Lab**, Instituto Politécnico de Bragança (ESTiG), Informatics Engineering.
 
 - **Student:** Rinor Basholli (69492)
-- **Supervisor:** Tiago Pedrosa
 - **Demonstration:** `npm run dev` then `http://localhost:3000`
 
 Educational web laboratory for three AI-related cybersecurity risks:

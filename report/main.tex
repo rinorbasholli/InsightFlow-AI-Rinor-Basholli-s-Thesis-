@@ -20,6 +20,9 @@
 \usepackage{amsmath}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,calc,fit}
+\usepackage{csquotes} % recommended by biblatex with babel
+\usepackage[backend=biber,style=ieee]{biblatex}
+\addbibresource{refs.bib}
 \usepackage[pdftex,hidelinks]{hyperref}
 \usepackage[newfloat]{minted}
 \setminted{breaklines,fontsize=\scriptsize,frame=single}
@@ -95,9 +98,8 @@ Este relatório apresenta o InsightFlow AI, um laboratório web educacional para
 \include{cap8}
 
 % listagem de referências / bibliography
-% estilo de referências. outros valores posíveis são 'plain' e 'abbrv' / other values are 'plain' and 'abbrv'
-\bibliographystyle{ieeetr}
-\bibliography{refs}
+% biblatex + biber, IEEE style; listed in the table of contents
+\printbibliography[heading=bibintoc]
 
 % Apêndice
 \clearpage

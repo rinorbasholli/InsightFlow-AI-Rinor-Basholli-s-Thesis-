@@ -33,7 +33,7 @@ export interface AnalyzedSample {
   labelOrigin?: 'dataset' | 'known-sample' | 'llm' | 'fallback';
 }
 
-/** Fixed seed so Load 90 is reproducible across reloads and thesis screenshots. */
+/** Fixed seed so Load 90 is reproducible across reloads. */
 export const DATASET_SEED = 20260927;
 
 function mulberry32(seed: number) {

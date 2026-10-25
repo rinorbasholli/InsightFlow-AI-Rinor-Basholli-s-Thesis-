@@ -37,7 +37,7 @@ const ai = new GoogleGenAI({
   },
 });
 
-// Pedrosa A7: JSON bodies are capped at 32kb (size limit / injection surface).
+// JSON bodies are capped at 32kb.
 app.use(express.json({ limit: JSON_BODY_LIMIT }));
 app.use(requireLabAccess);
 app.use(rateLimitApi);
@@ -574,7 +574,7 @@ app.get('/api/eval/phishing', (_req, res) => {
   });
 });
 
-// Real FGSM/PGD. Gemini is not used to invent confidences.
+// FGSM/PGD via the Python eval service.
 app.post('/api/adversarial-perturb', async (req, res) => {
   const { originalClass, targetClass, noiseLevel, method, targeted } = req.body;
   try {

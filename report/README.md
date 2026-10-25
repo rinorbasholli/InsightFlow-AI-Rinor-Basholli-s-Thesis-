@@ -2,7 +2,7 @@
 
 English report for Rinor Basholli (69492), Informatics Engineering, ESTiG / Instituto Politécnico de Bragança.
 
-This folder **is** the official `project-report` template (the one from Virtual / the `project-report` zip Pedrosa opened). The hard-disk example chapters were replaced by the thesis chapters. Logos and `sty/project-report.sty` are the official files. Bibliography is BibTeX `ieeetr`.
+This folder **is** the official `project-report` template from Virtual. The hard-disk example chapters were replaced by the thesis chapters. Logos and `sty/project-report.sty` are the official files.
 
 ## Overleaf
 
