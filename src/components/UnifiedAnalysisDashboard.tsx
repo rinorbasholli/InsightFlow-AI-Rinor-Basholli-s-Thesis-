@@ -125,7 +125,7 @@ export default function UnifiedAnalysisDashboard({
             </div>
             <h2 className="text-xl font-bold font-display text-white mt-2">Cybersecurity Research Dashboard</h2>
             <p className="text-xs text-slate-400 mt-1">
-              Analyzing email writing patterns, how often spam filters fail, and simple defense rules to stop deepfakes and AI phishing.
+              Teaching emails with assigned score bands, plus labelled deepfake and attack demos. Not a mail-filter measurement.
             </p>
           </div>
           
@@ -207,7 +207,7 @@ export default function UnifiedAnalysisDashboard({
         {/* Metric 3: AI Phishing Bypass Rate */}
         <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800 space-y-2">
           <div className="flex justify-between items-center text-[10px] uppercase font-mono font-semibold text-slate-400">
-            <span>Filter Failure Rate</span>
+            <span>Designed AI-class gap</span>
             <span className="text-red-400">Designed</span>
           </div>
           <div className="flex items-baseline gap-1.5">
@@ -236,7 +236,7 @@ export default function UnifiedAnalysisDashboard({
             <div style={{ width: `${metrics.avgDetectability}%` }} className="h-full bg-emerald-500 transition-all duration-300" />
           </div>
           <p className="text-[10px] text-slate-500 leading-snug">
-            How likely a security system or trained user will catch this email.
+            Mean of the assigned detectability bands. Configuration, not a catch-rate measurement.
           </p>
         </div>
       </div>
