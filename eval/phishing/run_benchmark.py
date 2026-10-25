@@ -5,10 +5,10 @@ Labels in corpus.jsonl are the public/teaching labels shipped with this reposito
 They are not Gmail verdicts. I checked MANUAL_REVIEW.csv.
 Metrics: accuracy, precision, recall, F1, AUC on ham vs phish.
 
-Corpus is reconstructed teaching data around IPB/ESTiG student-mail patterns.
-It is not a mailbox harvest and must not be reported as Gmail or SpamAssassin numbers.
-Ham and phish intentionally share subjects, urgency, lookalike institutional wording,
-slight typos, and mixed PT/EN so a bag-of-n-grams model is not given a toy split.
+I created this 187-email teaching list myself (unique bodies, IPB/ESTiG patterns,
+shared subjects, mixed PT/EN). I wrote the samples and reconstructed some from
+public scam and notice patterns I found online. It is not a mailbox harvest and
+must not be reported as Gmail or SpamAssassin numbers.
 """
 from __future__ import annotations
 
@@ -45,12 +45,13 @@ SRC_PHISH_LOOKALIKE = "reconstructed lookalike / spear-phish pattern"
 
 
 def build_corpus() -> list[dict]:
-    """Deterministic reconstructed teaching corpus. Every body is unique; labels stay in-file.
+    """I built this corpus: 187 unique emails I wrote or reconstructed from public patterns.
 
     Overlap is deliberate: urgent ham on official domains, calm phish on ipb/estig/virtual
     lookalikes, shared subjects, typos, and mixed PT/EN student mail.
     """
-    # (sender, subject, body, label, source) — one row each, never "same sentence + Reference N".
+    # I created every row below. I wrote the texts and reconstructed some from
+    # public institutional and scam patterns I found online.
     raw: list[tuple[str, str, str, str, str]] = [
         # --- Urgent official ham (password / timetable / mailbox) ---
         (
