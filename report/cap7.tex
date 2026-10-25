@@ -24,13 +24,11 @@ I cannot defend a claim that InsightFlow AI detects phishing in the wild. I cann
 
 The phishing corpus repeats a short list of patterns. The gap between wording-only and with-sender is the finding: CV F1 $0.708\pm0.020$ versus $0.806\pm0.040$, against an always-phish dummy of $0.736\pm0.008$. Bodies still contain URLs, so wording-only is not domain-free. A harder corpus would need messages that share vocabulary across classes without leaking the host in either the From line or the body. I did not build that.
 
-The live attack and the 200-image batch are the same pixel-space loops, but they are not the same experiment: the batch is untargeted on 200 images; Simulate is targeted on one image. I do not mix those figures.
+The live attack and the 200-image batch are the same pixel-space loops, but they are not the same experiment: the batch is untargeted on 200 images; Simulate is untargeted on one image unless the request sets \texttt{targeted: true}. I do not mix those figures.
 
 The teaching set in the browser is also easy on purpose. Conventional rows shout. Legitimate rows are calm and use \texttt{ipb.pt}. AI-style rows are polite and use lookalike hosts. A student can learn the contrast. A paper cannot treat the contrast as a field result.
 
 The deepfake presets always return the same markers. Gemini, when it is used, writes a plausible story from the filename. That can over-fit the word ``urgent''. I accepted this because I refused to fake a pixel detector.
-
-If someone types a class that is not in CIFAR-10, the service maps a few aliases and otherwise falls back to class index 0 (airplane). That is a remaining limitation. I no longer ship banana or panda as suggested labels.
 
 I have no application logs of who generated which email. That is good for privacy. It is bad for repudiation (Section~\ref{sec:stride}).
 

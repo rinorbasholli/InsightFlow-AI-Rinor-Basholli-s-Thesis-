@@ -1382,16 +1382,16 @@ def build_corpus() -> list[dict]:
         else:
             ai_n += 1
             rid = f"ai-{ai_n}"
-        rows.append(
-            {
+            rows.append(
+                {
                 "id": rid,
-                "sender": sender,
+                    "sender": sender,
                 "subject": subject,
-                "body": body,
+                    "body": body,
                 "label": label,
                 "source": source,
-            }
-        )
+                }
+            )
     return rows
 
 

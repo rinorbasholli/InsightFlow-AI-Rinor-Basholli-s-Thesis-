@@ -69,6 +69,7 @@ test('live attack uses pixel-space FGSM/PGD, not torchattacks', () => {
   assert.equal(serviceSrc.includes('torchattacks'), false);
   assert.equal(attacksSrc.includes('torchattacks'), false);
   assert.match(serviceSrc, /run_local_attack/);
+  assert.match(serviceSrc, /status_code=500/);
   assert.match(serviceSrc, /L_inf \{linf\} exceeds eps/);
   assert.match(serviceSrc, /targeted: bool = False/);
   assert.match(serviceSrc, /targetReached/);

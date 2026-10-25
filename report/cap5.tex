@@ -64,7 +64,7 @@ I implemented three presets only. I wrote the filenames so that they look like t
 \section{Adversarial path}
 \label{sec:impl-adv}
 
-\texttt{eval/adversarial/service.py} is a FastAPI application. On first attack it downloads CIFAR-10 and loads \texttt{cifar10\_resnet56} through \texttt{torch.hub}. It picks a seeded test image of the requested class that the model already classifies correctly, runs \emph{targeted} FGSM or PGD toward the requested target class in pixel space, projects onto the $L_\infty$ ball, and returns softmax percentages plus the measured $L_\infty$. Unknown class names return HTTP 400. The architecture field is ignored; the loaded checkpoint is always ResNet-56.
+\texttt{eval/adversarial/service.py} is a FastAPI application. On first attack it downloads CIFAR-10 and loads \texttt{cifar10\_resnet56} through \texttt{torch.hub}. It walks the test set and takes the first image of the requested class that the model already classifies correctly. The default attack is untargeted FGSM or PGD in pixel space; a targeted run happens only when the request sets \texttt{targeted: true}. The result is projected onto the $L_\infty$ ball and returned as softmax percentages plus the measured $L_\infty$. Unknown class names return HTTP 400. The architecture field is ignored; the loaded checkpoint is always ResNet-56.
 
 \texttt{eval/adversarial/run\_attacks.py} is the batch script. It samples 200 test images by default, seed 20260927, and writes \texttt{adversarial\_metrics.json} with \emph{untargeted} FGSM and PGD. I describe the method in Chapter~\ref{cha:eval}. I do not paste invented accuracies.
 

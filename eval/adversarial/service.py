@@ -148,7 +148,8 @@ def attack(req: AttackReq, x_eval_token: str | None = Header(default=None, alias
         adv_pred = int(adv_prob.argmax())
         adv_conf = float(adv_prob[adv_pred] * 100)
         linf = float((x_adv - x).abs().amax().item())
-    assert linf <= eps + 1e-6, f"L_inf {linf} exceeds eps {eps}"
+    if linf > eps + 1e-6:
+        raise HTTPException(status_code=500, detail=f"L_inf {linf} exceeds eps {eps}")
     t_idx = int(t.item()) if t is not None else None
     target_reached = (adv_pred == t_idx) if t_idx is not None else None
     return {
