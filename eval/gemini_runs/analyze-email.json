@@ -1,0 +1,28 @@
+{
+  "success": true,
+  "source": "gemini",
+  "analysis": {
+    "realismScore": 25,
+    "detectabilityScore": 90,
+    "languagePolish": 30,
+    "urgencyLevel": "medium",
+    "detectionDifficulty": "Very Easy",
+    "indicators": [
+      "Non-institutional sender domain (estig-virtual.net)",
+      "Direct request for sensitive banking information (IBAN)",
+      "Unnatural phrasing explicitly referencing a page copying a layout",
+      "Generic greeting lacking recipient personalization"
+    ],
+    "mitigationRules": [
+      "Enforce strict inbound email filtering based on domain age and reputation",
+      "Implement DMARC, DKIM, and SPF validation checks",
+      "Conduct security awareness campaigns regarding financial info requests via unverified links"
+    ],
+    "detailedAnalysis": "This email is a low-sophistication phishing attempt designed to capture banking details by promising a scholarship payout. The email leverages a suspicious external domain (`estig-virtual.net`) rather than an authentic academic institution domain. Additionally, the body text contains extremely awkward, meta-descriptive language ('page that copies the Virtual layout') which severely undermines its credibility.\n\nBecause there is no proper branding, greeting, or contextual personalization, the email fails basic realism standards. Automated email security gateways and alert users can easily flag and neutralize this attack vector prior to user exposure.",
+    "predictedCategory": "conventional_phishing",
+    "categoryRationale": "Classified as conventional phishing due to its explicit IBAN harvest lure, non-institutional sender domain, and poorly phrased context."
+  },
+  "_http_status": 200,
+  "_elapsed_s": 9.67,
+  "_route": "/api/analyze-email"
+}

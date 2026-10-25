@@ -1,0 +1,21 @@
+id,subject,label,rinor_agrees
+ham-1,Password expiry reminder,ham,yes
+ham-8,Mailbox quota,ham,yes
+ham-15,Supervisor signature needed,ham,yes
+ham-22,Canteen menu week 43,ham,yes
+ham-29,Residence inspection,ham,yes
+ham-36,Weekend plans,ham,yes
+ham-44,Canteen after IA,ham,yes
+ham-53,Tuition receipt,ham,yes
+ham-61,Weekend plans,ham,yes
+ham-70,Re: group work,ham,yes
+ai-1,Password expiry reminder,phish,yes
+ai-14,Scholarship shortlist,phish,yes
+ai-27,Residence inspection,phish,yes
+ai-40,Re: group work,phish,yes
+ai-53,Horário semana 43,phish,yes
+ai-66,Timetable change week 42,phish,yes
+conv-1,Urgent account hold,phish,yes
+conv-8,Scholarship shortlist,phish,yes
+conv-16,Security alert,phish,yes
+conv-23,Student card reprint,phish,yes

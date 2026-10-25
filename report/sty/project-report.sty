@@ -1,0 +1,416 @@
+%%  Estilo para relatórios Projecto Integrado.
+%
+
+%%%%%
+%%%%%   PRELIMS
+%%%%%
+
+\typeout{Estilo para relat\'orios da disciplina de Projecto / Style for Project Reports. <$Date: 2/12/2014 $>}
+
+% First thing we do is make sure that report has been loaded.  A
+% common error is to try to use project-report as a documentstyle.
+\@ifundefined{chapter}{\@latexerr{The `project-report' option should be used
+with the `report' document style}{You should probably read the
+project-report documentation.}}{}
+
+%%%%%
+%%%%%   DOCUMENTATION
+%%%%%
+
+\long\def\comment#1{}
+\comment{
+
+  Examplo de utilização:
+    \documentclass{report}
+
+    \usepackage{project-report}
+    \dept{Inform\'atica e Comunica\c c\~oes}
+    \course{Engenharia Inform\'atica}
+
+
+    \begin{document}
+    \title{Como Escrever Relatórios\\
+            Com Títulos de Duas Linhas}
+    \author{João Candidato}
+    \supervisor{Orlando Orientador}
+    \cosupervisor{Carlos Coorientador}
+    \firstreader{Antunes Arguente}
+    \secondreader{Alberto Arguente (Outro Departmento)}
+ 
+    \beforepreface
+    \prefacesection{Prefácio}
+        Este relatório cobre tudo o que for necessário saber sobre...
+    \prefacesection{Agradecimentos}
+        Gostaria de agradecer...
+    \afterpreface
+ 
+    \chapter{Introdução}
+         ...
+    \chapter{Conclusões}
+         ...
+    \appendix
+    \chapter{Um Apêndice}
+         ...
+    \bibliographystyle{plain}
+    \bibliography{minhabib}
+    \end{document}
+
+  Usage example:
+    \documentclass{report}
+
+    \usepackage{project-report}
+    \reportlanguage{en}
+    \dept{Computers and Communications}
+    \course{Computer Engineering}
+
+    \begin{document}
+    \title{How to Write Reports\\
+            With Two-Line Titles}
+    \author{John Candidate}
+    \supervisor{Oliver Supervisor}
+    \cosupervisor{Charles Cosupervisor}
+    \firstreader{Anthony Reader}
+    \secondreader{Albert Reader (Another Department)}
+ 
+    \beforepreface
+    \prefacesection{Preface}
+        This report covers everything you need to know about...
+    \prefacesection{Acknowledgments}
+        I would like to thank...
+    \afterpreface
+ 
+    \chapter{Introduction}
+         ...
+    \chapter{Conclusions}
+         ...
+    \appendix
+    \chapter{An Appendix}
+         ...
+    \bibliographystyle{plain}
+    \bibliography{mybib}
+    \end{document}
+
+Documentation: 
+    This style file modifies the standard report style to follow the
+    Graduate Degree Support Section of the Registrar's Office's
+    "Directions for Preparing Doctoral Dissertations".  It sets the
+    margins and interline spacing and disallows page breaks at
+    hyphens.
+
+    The \beforepreface command creates the title page, a disclaimer page
+    (optionally), and a signature page.  Then the user should put
+    preface section(s), using the \prefacesection{section title}
+    command.  The \afterpreface command then produces the tables of
+    contents, tables and figures, and sets things up to start
+    the main body (on arabic page 1).
+    
+    The following commands can control what goes in the front matter
+    material:
+    
+        \title{thesis title}
+        \author{author's name}
+	\authnum{author's number}
+        \dept{author's department}
+                - Informática e Comunicações if omitted
+        \course{author's course}
+                - Engenharia Informática if omitted
+The following switches allow for special title pages (not all are current)
+        \supervisor{the principal supervisor's name}
+        \cosupervisor{optional second supervisor's name}
+        \firstreader{the first reader's name}
+        \secondreader{the second reader's name}
+        \thirdreader{optional third reader's name}
+        \submitdate{month year in which submitted to GPO}
+                - date LaTeX'd if omitted
+        \disclaimertrue or \disclaimerfalse
+                - produces or don't produce the disclaimer page
+        \figurespagetrue or \figurespagefalse
+                - produce or don't produce a List of Figures page
+                  (true by default)
+        \tablespagetrue or \tablespagefalse
+                - produce or don't produce a List of Tables page
+                  (true by default)
+
+This style uses normal interline spacing.
+That can be changed by doing:
+    \setstretch{1.3}
+(or whatever you want instead of 1.3)
+
+This command should be put before the \begin{document} command but
+after loading the packages
+
+You can also set any particular section in singlespacing mode by using
+the singlespace environment.  For example
+
+\begin{quote}
+\begin{singlespace}
+...
+\end{singlespace}
+\end{quote}
+
+makes the quote singlespaced.  See the documentation for setspace.sty
+for more information.
+
+The example at the beginning shows the 12pt substyle being used.  This
+seems to give acceptable looking results, but it may be omitted to get
+smaller print.
+
+}
+
+%%%%%
+%%%%%   SETUP DOUBLESPACING
+%%%%%
+
+% include doublespace.sty for some of the stuff below
+
+\RequirePackage{setspace}
+\RequirePackage{graphicx}
+\RequirePackage{ifthen}
+
+% Use 1.3 times the normal baseline-to-baseline skip
+%\setstretch{1.3}
+
+
+%%%%%
+%%%%%   SETUP MARGINS AND PENALTIES
+%%%%%
+
+% We need 1" margins except on the binding edge, where it is 1 1/2"
+% Theses may be either single or double sided
+%  \if@twoside
+%     \setlength\oddsidemargin   {36.1\p@}
+%     \setlength\evensidemargin  {0\p@}
+%     \setlength\marginparwidth {40\p@}
+%  \else
+%     \setlength\oddsidemargin   {36.1\p@}
+%     \setlength\evensidemargin  {36.1\p@}
+%     \setlength\marginparwidth  {40\p@}
+%  \fi
+
+%\marginparsep 10pt
+\oddsidemargin 1cm 
+\evensidemargin 1cm
+%\marginparwidth 40pt 
+
+
+\topmargin 0pt 
+\headsep 1cm
+\textheight 22cm 
+\textwidth 14cm
+
+% Disallow page breaks at hyphens (this will give some underfull vbox's,
+% so an alternative is to use \brokenpenalty=100 and manually search
+% for and fix such page breaks)
+\brokenpenalty=10000
+
+%%%%%
+%%%%%   SETUP COMMANDS
+%%%%%
+
+% Language selection logic
+\newcommand{\selectedReportLanguage}{pt}
+\newcommand{\reportlanguage}[1]{\renewcommand{\selectedReportLanguage}{#1}}
+
+% defaults
+\def\@dept{%
+  \ifthenelse{\equal{\selectedReportLanguage}{en}}%
+    {Informatics and Communications}%
+    {Inform\'atica e Comunica\c c\~oes}%
+}
+\def\@course{%
+  \ifthenelse{\equal{\selectedReportLanguage}{en}}%
+    {Informatics Engineering}%
+    {Engenharia Inform\'atica}%
+}
+\def\@courseyear{\the\year}
+
+\newcommand{\supervisorlabel}{%
+  \ifthenelse{\equal{\selectedReportLanguage}{en}}{Supervisor}{Orientador}%
+}
+\newcommand{\cosupervisorlabel}{%
+  \ifthenelse{\equal{\selectedReportLanguage}{en}}{Co-Supervisor}{Co-Orientador}%
+}
+\newcommand{\arguentelabel}{%
+  \ifthenelse{\equal{\selectedReportLanguage}{en}}{Discussant}{Arguente}%
+}
+
+\def\@submitdate{%
+  \ifthenelse{\equal{\selectedReportLanguage}{en}}{%
+    \ifcase\the\month\or
+    January\or February\or March\or April\or May\or June\or
+    July\or August\or September\or October\or November\or December\fi
+  }{%
+    \ifcase\the\month\or
+    janeiro\or fevereiro\or mar\c co\or abril\or maio\or junho\or
+    julho\or agosto\or setembro\or outubro\or novembro\or dezembro\fi
+  }%
+  \space \number\the\year}
+
+% defines department (optional)
+\newcommand*{\dept}[1]{\def\@dept{#1}}
+\newcommand*{\course}[1]{\def\@course{#1}}
+\newcommand*{\courseyear}[1]{\def\@courseyear{#1}}
+
+\newcommand*{\authnum}[1]{\def\@authnum{#1}}
+
+\newcommand*{\secondauthor}[1]{\def\@secondauthor{#1}}
+\newcommand*{\secauthnum}[1]{\def\@secauthnum{#1}}
+
+\newcommand*{\supervisor}[1]{\def\@supervisor{#1}}
+\newcommand*{\cosupervisor}[1]{\def\@cosupervisor{#1}}
+
+\newcommand*{\arguente}[1]{\def\@arguente{#1}}
+\newcommand*{\reader}[1]{\def\@reader{#1}}
+
+\newcommand*{\submitdate}[1]{\def\@submitdate{#1}}
+
+\newif\iffigurespage \newif\iftablespage \newif\ifdisclaimer
+\disclaimertrue \figurespagetrue \tablespagetrue
+
+
+\def\coverpage{%
+  \thispagestyle{empty}%
+
+  \hspace{0cm}
+    \includegraphics[width=10cm, keepaspectratio]{sty/logo_estig}\\
+
+
+      \null\vskip1in%
+      \begin{center}
+        {\Large\expandafter{\bf \@title}}
+      \vfill
+      {\textbf{
+	\@author \ifthenelse{\isundefined{\@authnum}}{}{ - \@authnum}\\
+	\ifthenelse{\isundefined{\@secondauthor}}{}{
+	\@secondauthor \ifthenelse{\isundefined{\@secauthnum}}{}{ - \@secauthnum}
+	}
+	 }
+	  }
+      \vfill
+      \ifthenelse{\equal{\selectedReportLanguage}{en}}{Work supervised by}{Trabalho realizado sob a orienta\c{c}\~{a}o de}\\
+      \textbf{
+	\@supervisor\\
+	\ifthenelse{\isundefined{\@cosupervisor}}{}{\@cosupervisor}
+	}
+      \vfill
+      \begin{small}
+	{\bf\@course}\\
+	{\bf\@courseyear}\\
+%        \flushright Departamento de \expandafter{\bf \@dept}\\
+      \end{small}
+      \end{center}
+
+     \newpage}
+
+\def\titlep{%
+		\cleardoublepage
+        \thispagestyle{empty}%
+        \null\vskip1in%
+        \begin{center}
+                \bf\Huge\expandafter{\@title}
+        \end{center}
+        \vfill
+        \begin{center}
+                \ifthenelse{\equal{\selectedReportLanguage}{en}}{Project Report}{Relat\'orio da UC de Projecto}\\
+		{\bf \@course}\\
+               \ifthenelse{\equal{\selectedReportLanguage}{en}}{School of Technology and Management}{Escola Superior de Tecnologia e de Gest\~ao}
+        \end{center}
+        \vfill
+        \begin{center}
+                \rm \@author \ifthenelse{\isundefined{\@secondauthor}}{}{,\@secondauthor}\\
+                \@submitdate\\
+        \end{center}\vskip.5in\newpage}
+
+
+\def\disclaimerpage{%
+        \null\vfill
+        \begin{flushleft}
+                \ifthenelse{\equal{\selectedReportLanguage}{en}}
+                {The School of Technology and Management is not responsible for the opinions expressed in this report.}
+                {A Escola Superior de Tecnologia e de Gest\~ao n\~ao se responsabiliza pelas opini\~oes expressas neste relat\'orio.}
+        \end{flushleft}
+        \vfill\newpage}
+
+
+\long\def\signature#1{%
+\begin{flushright}
+\begin{minipage}{5in}
+\parindent=0pt
+\ifthenelse{\equal{\selectedReportLanguage}{en}}
+{I certify that I have read this report and that, in my opinion, it is adequate in its content and form as a demonstration of the work developed within the scope of the Project course.}
+{Certifico que li este relat\'orio e que, na minha opini\~ao, \'e adequado no seu conte\'udo e forma como demonstrador do trabalho desenvolvido no \^ambito da UC de Projecto.}
+\par
+\vspace{.5in}
+%\hbox to 4in{\hfil\shortstack{\vrule width 3in height 0.4pt\\ #1}}
+\hbox to 5in{\hfil\begin{tabular}{@{}l@{}}\vrule width 3in height
+    0.4pt depth 0pt\\ #1\end{tabular}}
+\end{minipage}
+\end{flushright}}
+
+\def\signaturepage{%
+        \signature{\@supervisor\ (\supervisorlabel)}
+% if second principal advisor
+		\ifthenelse{\isundefined{\@cosupervisor}}{}{
+        \signature{\@cosupervisor\ (\cosupervisorlabel)}
+        }
+		\ifthenelse{\isundefined{\@arguente}}{}{
+        \signature{\@arguente\ (\arguentelabel)}
+        }
+		\ifthenelse{\isundefined{\@reader}}{}{
+        \signature{\@reader}
+        }
+        \vfill
+% if thirdreader then do \signature\@thirdreader \vfill
+        \begin{flushright}
+        \begin{minipage}{5in}
+        \ifthenelse{\equal{\selectedReportLanguage}{en}}{Accepted for evaluation in the Project course.}{Aceite para avalia\c{c}\~ao da UC de Projecto.}\par
+        \vspace{.5in}
+%        \hbox to 4in{\hfil\shortstack{\vrule width 3in height 0.4pt}}
+        \end{minipage}
+        \end{flushright}
+}
+
+\def\beforepreface{%
+        \pagenumbering{roman}
+        \pagestyle{plain}
+        \coverpage
+        \titlep
+        \ifdisclaimer\disclaimerpage\fi
+        \cleardoublepage
+}
+        
+\usepackage{xparse}
+
+\NewDocumentCommand\prefacesection{sm}{% s = star, m = mandatory arg
+   \IfBooleanTF{#1}{%
+        \chapter*{#2}
+   }{%
+        \chapter*{#2}
+        \addcontentsline{toc}{chapter}{#2}
+   }%
+}
+        
+\def\afterpreface{\newpage
+        \tableofcontents
+        \iftablespage
+                \listoftables
+        \fi
+        \iffigurespage
+                \listoffigures
+        \fi
+	}
+
+\def\bodystart{
+        \cleardoublepage
+        \pagenumbering{arabic}
+        \pagestyle{headings}}
+
+% Redefine \thebibliography to go to a new page and put an entry in the
+% table of contents
+\let\@ldthebibliography\thebibliography
+\renewcommand{\thebibliography}[1]{\newpage
+                \@ldthebibliography{#1}%
+\addcontentsline{toc}{chapter}{\bibname}}
+
+% Start out normal
+\pagestyle{headings}

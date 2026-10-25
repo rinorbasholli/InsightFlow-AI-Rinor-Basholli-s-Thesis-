@@ -1,0 +1,23 @@
+# Optional: website + Python eval in one container.
+FROM python:3.12-slim
+
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY package.json package-lock.json ./
+RUN npm install
+
+COPY eval/requirements.txt eval/requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir fastapi uvicorn pydantic numpy pillow \
+    && pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu \
+    && pip install --no-cache-dir torchattacks
+
+COPY . .
+RUN npm run build && npm prune --omit=dev
+
+ENV NODE_ENV=production
+ENV EVAL_API_URL=http://127.0.0.1:8001
+EXPOSE 8080
+CMD ["sh", "-c", "PORT=8001 python eval/adversarial/service.py & PORT=${PORT:-8080} node dist/server.cjs"]

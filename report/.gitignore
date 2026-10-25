@@ -1,0 +1,60 @@
+# Compiled LaTeX files
+*.pdf
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex(busy)
+
+# Bibliography
+*.bbl
+*.blg
+
+# Index
+*.idx
+*.ilg
+*.ind
+
+# Temporary files
+*.tmp
+*.bak
+*~
+*.swp
+
+# Build directories
+build/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex(busy)
+*.bbl
+*.blg
+*.idx
+*.ilg
+*.ind
+*.tmp
+*.bak
+_minted/

@@ -1,0 +1,25 @@
+\chapter{Declaration on the use of generative AI}
+\label{app:ai}
+
+This appendix is the declaration I will defend.
+
+\section{Declaration}
+\label{sec:ai-decl}
+
+I used generative AI in this project.
+
+\begin{itemize}
+\item Gemini is used on the teaching email routes \texttt{/api/generate-phishing} and \texttt{/api/analyze-email}, and on non-preset deepfake filenames. Each of those answers carries \texttt{source} equal to \texttt{gemini}, \texttt{fallback}, or \texttt{preset}.
+\item The adversarial route does not use Gemini. When the Python service is down, the answer is 503, not an invented confidence.
+\item The official report is this \LaTeX\ tree under \texttt{report/}, using BibTeX \texttt{ieeetr} as the template requires.
+\item I implemented the lock, the tests, and the evaluation wiring. Every number must be checked by me, Rinor Basholli.
+\end{itemize}
+
+The work could not exist in this form without my decisions: the requirements, the source labels, the refusal to harvest mail, the CIFAR model choice, the unused adversarial fallback, and the honesty about the first F1 $= 1.0$ run and the later 0.756 wording run. The same work could have been written without a language model, more slowly, as ordinary React and Python. A model did not sit the course. I did.
+
+\section{Model identifier}
+\label{sec:model-id}
+
+The default Gemini model id in \texttt{server.ts} is \texttt{gemini-3.5-flash}. The environment variable \texttt{GEMINI\_MODEL} overrides it. I must say in the viva which id the live key served.
+
+\texttt{getAdversarialFallback} is still in \texttt{server.ts} and is still unused, so a missing eval service cannot look like a successful attack.

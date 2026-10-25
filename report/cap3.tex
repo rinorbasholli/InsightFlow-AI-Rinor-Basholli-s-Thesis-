@@ -1,0 +1,104 @@
+\chapter{Requirements and use cases}
+\label{cha:req}
+
+This chapter lists the requirements I used while I implemented the laboratory. I wrote them after the first interface draft and after the meeting with my supervisor. I needed a list that I could test against the code, not a generic product backlog.
+
+\section{Actors}
+\label{sec:actors}
+
+I considered three actors.
+
+\begin{description}
+\item[Student / author] I use the laboratory to generate samples, load the 90-row set, and run the local evaluation scripts.
+\item[Examiner] An examiner opens the laboratory, logs in, and walks through the four screens.
+\item[Supervisor] The supervisor reviews the same screens and asks where each number comes from.
+\end{description}
+
+\section{Functional requirements}
+\label{sec:fr}
+
+Table~\ref{tab:fr} lists the functional requirements. I mapped each one to a file or a route so that I could check it later.
+
+\begin{table}[htbp]
+\centering
+\caption{Functional requirements.}
+\label{tab:fr}
+\scriptsize
+\begin{tabular}{p{1.3cm}p{7.4cm}p{3.4cm}}
+\toprule
+ID & Requirement & Where I implemented it \\
+\midrule
+FR1 & Authenticate every page and every API call when credentials are configured. Fail closed in production if they are missing. & \texttt{labSecurity.ts}, \texttt{server.ts} \\
+FR2 & Generate a teaching phishing email from a scenario, a prompt, and a complexity level. & \texttt{POST /api/generate-phishing} \\
+FR3 & Analyse subject, body, and optional sender. Return scores, a predicted class, and a rationale. & \texttt{POST /api/analyze-email} \\
+FR4 & Accept a local \texttt{.txt} or \texttt{.eml} file in the Email Security Check and parse From / Subject / body. & \texttt{parseEmailFile} in \texttt{academicDataset.ts} \\
+FR5 & Load 90 in-memory teaching emails with a fixed seed. & \texttt{generate90Samples()} \\
+FR6 & Analyse a deepfake \emph{scenario} from a filename, a media type, and a text prompt. Do not read media bytes. & \texttt{POST /api/analyze-media-deepfake} \\
+FR7 & Return hardcoded JSON when the filename matches a preset exactly. & \texttt{PRE\_BAKED\_DEEPFAKES} \\
+FR8 & Run a real FGSM or PGD step on a pretrained CIFAR-10 classifier. Do not invent the confidence with Gemini. & \texttt{POST /api/adversarial-perturb}, \texttt{eval/adversarial/service.py} \\
+FR9 & Expose an evaluation health check. & \texttt{GET /api/eval/health} \\
+FR10 & Put \texttt{source} on every analytical JSON response. & \texttt{server.ts} \\
+FR11 & Reject prompt text that matches a small injection list. & \texttt{promptLooksInjected} \\
+FR12 & Limit JSON body size and hourly POST rate. & \texttt{express.json} 32\,kB; \texttt{rateLimitApi} \\
+FR13 & Show dashboard aggregates as configuration, not as filter measurements. & \texttt{UnifiedAnalysisDashboard.tsx} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Non-functional requirements}
+\label{sec:nfr}
+
+Table~\ref{tab:nfr} lists the quality constraints I accepted.
+
+\begin{table}[htbp]
+\centering
+\caption{Non-functional requirements.}
+\label{tab:nfr}
+\scriptsize
+\begin{tabular}{p{1.3cm}p{11.0cm}}
+\toprule
+ID & Requirement \\
+\midrule
+NFR1 & Secrets stay in environment variables. They are not committed. \\
+NFR2 & Password comparison uses a length-safe \texttt{crypto.timingSafeEqual} wrapper. \\
+NFR3 & The teaching dataset is templates plus a seed. It is not a mailbox harvest. \\
+NFR4 & The deepfake tab must say that bytes are not inspected. \\
+NFR5 & If Gemini is down, email generate/analyse and non-preset deepfake still return a deterministic fallback. Adversarial does not. \\
+NFR6 & Client state is \texttt{useState} only. There is no database. The footer states that the session is in memory. \\
+NFR7 & The report language is English. The user interface is English. \\
+NFR8 & Automated tests cover auth helpers and the injection check. \\
+NFR9 & The laboratory is educational. It is not a production detector. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Use cases}
+\label{sec:uc}
+
+I used the following use cases when I tested the interface by hand.
+
+\subsection{UC1 --- Log in to the laboratory}
+The examiner opens \texttt{http://localhost:3000} (or a host that I start from this repository). The React login form posts to \texttt{/api/login} and stores an HttpOnly cookie. HTTP Basic Auth still works for \texttt{curl} and for older clients. After a valid pair, later \texttt{/api/*} calls require that cookie or the Basic header. Static files load so the login page can render. If \texttt{LAB\_BASIC\_USER} or \texttt{LAB\_BASIC\_PASS} is missing in production, the server answers 503 and the laboratory stays closed.
+
+\subsection{UC2 --- Load the 90-sample teaching set}
+On the dashboard the examiner clicks ``Reset \& Load Study Dataset (90 Samples)''. \texttt{App.tsx} calls \texttt{generate90Samples()} and stores the array in React state. The counts 30 / 30 / 30 appear. The mean designed realism and the ``100 minus mean AI detectability'' values appear. Those two percentages are configuration from the bands in \texttt{academicDataset.ts}. They are not Gmail results.
+
+\subsection{UC3 --- Generate an AI phishing email}
+On the AI Phishing Lab tab the examiner sets a scenario and clicks generate. The browser posts to \texttt{/api/generate-phishing}. If the custom prompt looks injected, the server returns 400. If the hourly limit is reached, it returns 429. Otherwise Gemini is called. On success the JSON has \texttt{source: "gemini"}. On API error the JSON has \texttt{source: "fallback"} and a fixed ESTiG-themed template.
+
+\subsection{UC4 --- Analyse pasted text or a local file}
+The examiner pastes subject and body, or loads a \texttt{.txt} / \texttt{.eml} file. The browser posts to \texttt{/api/analyze-email}. Known samples keep their teaching label. Live text gets a Gemini class or the keyword fallback. The dashboard then shows the new row with \texttt{analysisSource}.
+
+\subsection{UC5 --- Inspect a deepfake scenario}
+The examiner picks one of the three presets or types another filename. The server never opens the file. An exact preset name returns \texttt{source: "preset"}. Another name goes to Gemini or to \texttt{getDynamicFallbackDeepfake}. Marker confidences are simulated.
+
+\subsection{UC6 --- Run a real model attack}
+On the AI Model Attacks tab the examiner chooses a class pair and an $\varepsilon$ value and clicks simulate. Express posts to the Python service. A success answer has \texttt{source: "computed"} and softmax values from the CIFAR-10 ResNet-56. If the service is down, the UI shows an error. Gemini is not used.
+
+\subsection{UC7 --- Check the attack service}
+The front end or a script can call \texttt{GET /api/eval/health}. Express forwards to the Python \texttt{/health} route. This is how I know whether UC6 can succeed.
+
+\section{Out of scope}
+\label{sec:oos}
+
+I did not implement a mail sender. I did not implement a real deepfake detector. I did not harvest inboxes. I did not train a production spam filter. I did not keep server-side logs of generated emails. Those limits are intentional. They also appear again in Chapter~\ref{cha:disc}.

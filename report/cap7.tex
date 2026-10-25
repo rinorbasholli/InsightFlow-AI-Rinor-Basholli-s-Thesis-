@@ -1,0 +1,74 @@
+\chapter{Discussion}
+\label{cha:disc}
+
+This chapter discusses what the results can and cannot support, the limits of the laboratory, ethics and dual use, and a STRIDE reading of the deployed system.
+
+\section{What I can defend}
+\label{sec:defend}
+
+I can defend the following statements.
+
+\begin{itemize}
+\item I built one web laboratory with four screens and labelled sources.
+\item The 90 emails are seeded templates. The 75\% and 51\% dashboard values are configuration from those templates.
+\item The phishing JSON reports F1 $= 0.756$ on 57 test rows of a reconstructed 187-row wording corpus. Ham recall is 0.25. I read that as a small, still-biased teaching set, not as a detector for the internet.
+\item The 200-image adversarial batch is in \texttt{eval/adversarial/results/adversarial\_metrics.json}: clean accuracy $0.955$; PGD ASR $0.905$ / $0.955$ / $0.96$ at $\varepsilon=2/255$, $8/255$, $16/255$. That is CIFAR-10 ResNet-56, not ImageNet.
+\item The deepfake tab does not inspect bytes.
+\item Auth, the 32\,kB limit, the rate limit, and the injection regex are in the code and covered by the automated tests.
+\end{itemize}
+
+I cannot defend a claim that InsightFlow AI detects phishing in the wild. I cannot defend a claim that it detects deepfakes. I can defend the ASR values in Table~\ref{tab:adv} as the export of this 200-image CIFAR-10 run, and I cannot treat them as ImageNet or campus-model results.
+
+\section{Limitations}
+\label{sec:limits-disc}
+
+The phishing corpus repeats a short list of patterns. Ham and phish differ in domain and bait words. TF-IDF sees that immediately. A harder corpus would need messages that share vocabulary across classes. I did not build that.
+
+The teaching set in the browser is also easy on purpose. Conventional rows shout. Legitimate rows are calm and use \texttt{ipb.pt}. AI-style rows are polite and use lookalike hosts. A student can learn the contrast. A paper cannot treat the contrast as a field result.
+
+The deepfake presets always return the same markers. Gemini, when it is used, writes a plausible story from the filename. That can over-fit the word ``urgent''. I accepted this because I refused to fake a pixel detector.
+
+If someone types a class that is not in CIFAR-10, the service maps a few aliases and otherwise falls back to class index 0 (airplane). That is a remaining limitation. I no longer ship banana or panda as suggested labels.
+
+I have no application logs of who generated which email. That is good for privacy. It is bad for repudiation (Section~\ref{sec:stride}).
+
+Examiners should treat \texttt{http://localhost:3000} from this repository as the system I defend. I still need to replace the report figures with a fresh capture of the login screen and the four tabs before I print the final copy.
+
+\section{Ethics and dual use}
+\label{sec:ethics}
+
+A phishing generator is dual use. The same route that helps an examiner see a clean spear-phish can help someone send one. I tried to reduce that risk without pretending I removed it.
+
+I did not attach a mail sender. The generate route returns JSON to the browser. It does not talk to SMTP. I rate-limited generate to 10 requests per IP per hour. I rejected a small class of prompt-injection strings. I locked the site with a login cookie and Basic Auth. I wrote teaching text that names lookalike domains instead of publishing a kit for a real campus mailbox.
+
+The deepfake tab can still normalise the idea of a forged CEO video. I kept it as a scenario inspector with a visible source label. I did not add a face-swap model.
+
+FGSM and PGD are standard teaching attacks~\cite{goodfellow2015explaining,madry2018towards}. I run them on CIFAR-10, not on a production campus model. The service can be placed behind \texttt{EVAL\_INTERNAL\_TOKEN}.
+
+I am responsible for how I demonstrate the laboratory. I will not use generated mail against real people.
+
+\section{STRIDE}
+\label{sec:stride}
+
+I used the STRIDE categories as a short threat pass~\cite{shostack2014threat,microsoftstride}. Table~\ref{tab:stride} is the result for this laboratory, not for a generic web app.
+
+\begin{table}[htbp]
+\centering
+\caption{STRIDE notes for InsightFlow AI.}
+\label{tab:stride}
+\scriptsize
+\begin{tabular}{p{2.6cm}p{10.4cm}}
+\toprule
+Category & What I saw in this system \\
+\midrule
+Spoofing & The login is a shared examiner pair checked with a timing-safe helper, then a session cookie or HTTP Basic Auth. An attacker who obtains that pair can act as an examiner. There is no second factor. \\
+Tampering & The generate and analyse routes send prompts to Gemini. A student can try to overwrite the system task. \texttt{promptLooksInjected} rejects a few strings. The JSON schema still trusts the model output shape. The unused \texttt{getAdversarialFallback} function must stay unused so that nobody tampers the story of ``computed'' confidences. \\
+Repudiation & I do not store server-side logs of generated emails or login names. A user can deny a generate call. For a teaching lab I preferred less retention. For an awareness campaign this would be unacceptable. \\
+Information disclosure & If the lock is off in production, anyone with the URL can generate mail and see teaching samples. That is why production fail-closes when env vars are missing. Gemini prompts include the user text, so prompt content leaves the campus machine. \\
+Denial of service & I rate-limit POST \texttt{/api/} paths: 10/hour/IP for generate-phishing, 40/hour/IP otherwise. Bodies above 32\,kB are rejected. Gemini or the Python service can still be slow or down. The website stays up; the attack tab returns 503. \\
+Elevation of privilege & There is only one role. There is no admin panel. Elevation here would mean leaving the Node process and reaching the Python service without the eval token, or reading \texttt{.env.local}. The token is an env var. It is not in git. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+STRIDE did not make the laboratory ``secure''. It made the remaining holes easier to say out loud: one shared password, no audit log, a weak injection list, and a public URL that must stay locked.
