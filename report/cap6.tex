@@ -88,7 +88,7 @@ I implemented the method my supervisor asked for: FGSM and PGD~\cite{goodfellow2
 \item Write \texttt{eval/adversarial/results/adversarial\_metrics.json} with \texttt{source: "computed"}.
 \end{enumerate}
 
-The JSON now has \texttt{n=200}, clean accuracy $0.955$ (191 of 200 already correct), seed 20260927, \texttt{source: "computed"}, torch $2.14.1$, and git commit \texttt{db25dc9}. Table~\ref{tab:adv} copies the three $\varepsilon$ buckets. ASR is a label flip among those 191 clean-correct images; \texttt{flip\_rate} is the old all-image figure. Each robust accuracy has a Wilson 95\% interval. $L_\infty$ never exceeds $\varepsilon$. The full stdout is \texttt{eval/adversarial/results/run200\_full.txt}.
+The JSON now has \texttt{n=200}, clean accuracy $0.955$ (191 of 200 already correct), seed 20260927, \texttt{source: "computed"}, torch $2.14.1$, and git commit \texttt{742a669}. Table~\ref{tab:adv} copies the three $\varepsilon$ buckets. ASR is a label flip among those 191 clean-correct images; \texttt{flip\_rate} is the old all-image figure. Each robust accuracy has a Wilson 95\% interval. $L_\infty$ never exceeds $\varepsilon$. The full stdout is \texttt{eval/adversarial/results/run200\_full.txt}.
 
 \begin{table}[htbp]
 \centering

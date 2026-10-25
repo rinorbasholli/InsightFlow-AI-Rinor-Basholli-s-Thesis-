@@ -18,9 +18,9 @@ checkpoint /Users/rb42/Downloads/InsightFlow-AI-Rinor-thesis/eval/adversarial/re
   "n": 200,
   "seed": 20260927,
   "source": "computed",
-  "generated_at": "2026-10-25T17:18:32Z",
+  "generated_at": "2026-10-25T18:26:44Z",
   "torch_version": "2.14.1",
-  "git_commit": "db25dc9",
+  "git_commit": "742a669",
   "asr_definition": "label flip among images the model classified correctly before the attack",
   "clean_accuracy": 0.955
 }
