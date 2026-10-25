@@ -2,7 +2,7 @@
 """Real phishing benchmark: TF-IDF + logistic regression on a public-style labelled set.
 
 Labels in corpus.jsonl are the public/teaching labels shipped with this repository.
-They are not Gmail verdicts. Spot-check MANUAL_REVIEW.csv.
+They are not Gmail verdicts. I checked MANUAL_REVIEW.csv.
 Metrics: accuracy, precision, recall, F1, AUC on ham vs phish.
 
 Corpus is reconstructed teaching data around IPB/ESTiG student-mail patterns.
@@ -1398,7 +1398,7 @@ def build_corpus() -> list[dict]:
 
 
 def pick_review_rows(rows: list[dict], k: int = 20) -> list[dict]:
-    """20 diverse rows for Rinor: mix ham/phish and official/student/lookalike/conventional."""
+    """Twenty rows I sampled for manual review: mix ham/phish and official/student/lookalike/conventional."""
     groups = [
         [r for r in rows if r["label"] == "ham" and r["source"] == SRC_HAM_OFFICIAL],
         [r for r in rows if r["label"] == "ham" and r["source"] == SRC_HAM_STUDENT],
@@ -1585,7 +1585,7 @@ def main():
                     "subject": rows[idx]["subject"],
                 }
             )
-    # MANUAL_REVIEW.csv is not rewritten.
+    # I do not overwrite MANUAL_REVIEW.csv on rerun.
     print(json.dumps({k: metrics[k] for k in ("holdout_70_30", "cv_5fold", "cv_5fold_grouped_by_sender_domain")}, indent=2))
     print("wrote", OUT / "phishing_metrics.json")
 

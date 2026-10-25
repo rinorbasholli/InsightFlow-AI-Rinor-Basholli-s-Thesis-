@@ -1,4 +1,4 @@
-id,subject,label,rinor_agrees
+id,subject,label,i_agree
 ham-1,Password expiry reminder,ham,yes
 ham-8,Mailbox quota,ham,yes
 ham-15,Supervisor signature needed,ham,yes
