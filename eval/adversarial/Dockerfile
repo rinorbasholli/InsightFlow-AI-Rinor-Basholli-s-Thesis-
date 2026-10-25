@@ -5,8 +5,7 @@ WORKDIR /app
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir \
         numpy fastapi uvicorn pydantic pillow \
-        torch torchvision --index-url https://download.pytorch.org/whl/cpu \
-    && pip install --no-cache-dir torchattacks
+        torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
 COPY eval/adversarial /app
 ENV PORT=8080

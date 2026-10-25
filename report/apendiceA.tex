@@ -15,11 +15,9 @@ I used generative AI in this project.
 \item I implemented the lock, the tests, and the evaluation wiring. Every number must be checked by me, Rinor Basholli.
 \end{itemize}
 
-The work could not exist in this form without my decisions: the requirements, the source labels, the refusal to harvest mail, the CIFAR model choice, the unused adversarial fallback, and the honesty about the first F1 $= 1.0$ run and the later 0.756 wording run. The same work could have been written without a language model, more slowly, as ordinary React and Python. A model did not sit the course. I did.
+The work could not exist in this form without my decisions: the requirements, the source labels, the refusal to harvest mail, the CIFAR model choice, and the honesty about the first F1 $= 1.0$ run and the sender leak in the $0.756$ run. The same work could have been written without a language model, more slowly, as ordinary React and Python. A model did not sit the course. I did.
 
 \section{Model identifier}
 \label{sec:model-id}
 
 The default Gemini model id in \texttt{server.ts} is \texttt{gemini-3.5-flash}. The environment variable \texttt{GEMINI\_MODEL} overrides it. I must say in the viva which id the live key served.
-
-\texttt{getAdversarialFallback} is still in \texttt{server.ts} and is still unused, so a missing eval service cannot look like a successful attack.

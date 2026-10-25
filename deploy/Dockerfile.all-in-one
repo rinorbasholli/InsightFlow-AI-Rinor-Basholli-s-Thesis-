@@ -11,8 +11,7 @@ RUN npm install
 COPY eval/requirements.txt eval/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir fastapi uvicorn pydantic numpy pillow \
-    && pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu \
-    && pip install --no-cache-dir torchattacks
+    && pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
 COPY . .
 RUN npm run build && npm prune --omit=dev

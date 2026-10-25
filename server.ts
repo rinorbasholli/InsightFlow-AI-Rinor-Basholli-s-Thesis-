@@ -311,28 +311,6 @@ function getEmailAnalysisFallback(subject: string, body: string, sender?: string
   };
 }
 
-// Unused. POST /api/adversarial-perturb talks to the Python eval service, or returns 503.
-function getAdversarialFallback(originalClass: string, targetClass: string, noiseLevel: any, architecture: string) {
-  const eps = parseFloat(String(noiseLevel)) || 0.05;
-  const originalConf = 98.4;
-  const targetConf = 86.2;
-  const noiseStr = Number((eps * 0.1).toFixed(4));
-  
-  return {
-    originalClass: originalClass || 'Airplane',
-    originalConfidence: originalConf,
-    targetClass: targetClass || 'Bird',
-    targetConfidence: targetConf,
-    noiseStrength: noiseStr,
-    mathematicalLogs: `Loss calculation: J(theta, x, y)\nGradient calculation: sign(grad_x(J))\nAdversarial perturbation: x_adv = x + ${eps} * sign(grad_x(J))`,
-    robustDefenseSteps: [
-      "Adversarial Training: include FGSM and PGD perturbed images directly in the model's training loop.",
-      "Spatial Smoothing & Gaussian Filtering: apply image preprocessing steps to reduce high-frequency adversarial noise before model inference.",
-      "Defensive Distillation: train a secondary smoother network using soft probability logits to decrease overall gradient sensitivity."
-    ]
-  };
-}
-
 // 1. Generate Phishing email using Gemini
 app.post('/api/generate-phishing', async (req, res) => {
   const { scenario, promptText, customPrompt, complexity } = req.body;
@@ -598,7 +576,7 @@ app.get('/api/eval/phishing', (_req, res) => {
 
 // Real FGSM/PGD. Gemini is not used to invent confidences.
 app.post('/api/adversarial-perturb', async (req, res) => {
-  const { originalClass, targetClass, noiseLevel, architecture } = req.body;
+  const { originalClass, targetClass, noiseLevel, method, targeted } = req.body;
   try {
     const response = await fetch(`${EVAL_API}/attack`, {
       method: 'POST',
@@ -610,8 +588,9 @@ app.post('/api/adversarial-perturb', async (req, res) => {
         originalClass,
         targetClass,
         noiseLevel,
-        architecture,
-        method: 'fgsm',
+        architecture: 'cifar10_resnet56',
+        method: method === 'pgd' ? 'pgd' : 'fgsm',
+        targeted: Boolean(targeted),
       }),
     });
     const data = await response.json();

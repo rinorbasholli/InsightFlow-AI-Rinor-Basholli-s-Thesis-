@@ -1,5 +1,4 @@
 {
-  "generated_at": "2026-10-20T20:43:00Z",
   "model_logged_by_server": "gemini-3.5-flash",
   "model_env": "gemini-3.5-flash",
   "routes": [
@@ -24,18 +23,11 @@
       "source": "gemini",
       "success": true,
       "http": 200
-    },
-    {
-      "file": "adversarial-perturb.json",
-      "route": "/api/adversarial-perturb",
-      "source": "computed",
-      "success": true,
-      "http": 200
     }
   ],
   "fallback_count": 0,
   "gemini_count": 3,
-  "computed_count": 1,
+  "computed_count": 0,
   "preset_count": 0,
-  "note": "First generate-phishing call hit Gemini 503 UNAVAILABLE (high demand) and used fallback. Later retry recorded here. Adversarial is computed on purpose."
+  "note": "This folder is Gemini teaching-route logs only. Live FGSM/PGD calls are eval/adversarial/results/live_fgsm.json, live_pgd.json, live_fgsm_targeted.json."
 }

@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
-"""Real FGSM/PGD on a pretrained CIFAR-10 ResNet, >=200 images.
+"""Pixel-space FGSM/PGD on CIFAR-10 ResNet-56, n>=200.
 
-Pedrosa asked for ResNet-50 + torchattacks + 200 images and the metrics
-clean accuracy, robust accuracy, attack success rate, perturbation size.
-CIFAR-10 pretrained ResNet-56 is used when ImageNet weights would make
-label accuracy meaningless on 32x32 images. ResNet-50 ImageNet is also
-run as a transfer check if --imagenet-transfer is set.
+Cited numbers come from this file. ImageNet ResNet-50 is a different input
+size and label space, so it is not loaded here.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import ssl
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -45,37 +43,24 @@ def logits(model, x):
     return model(normalize(x))
 
 
-def fgsm(model, x, y, eps):
-    x_adv = x.detach().clone().requires_grad_(True)
-    loss = F.cross_entropy(logits(model, x_adv), y)
-    loss.backward()
-    return (x_adv + eps * x_adv.grad.sign()).clamp(0.0, 1.0).detach()
+def project_linf(x_adv, x0, eps):
+    return torch.max(torch.min(x_adv, x0 + eps), x0 - eps).clamp(0.0, 1.0)
 
 
-def pgd(model, x, y, eps, alpha=None, steps=10):
-    if alpha is None:
-        alpha = eps / 4 if eps > 0 else 0.0
+def run_local_attack(model, x, y, eps, method="fgsm", target=None, steps=10):
+    """Pixel-space FGSM/PGD. target=None is untargeted (away from y)."""
+    label = target if target is not None else y
+    sign = -1.0 if target is not None else 1.0
+    alpha = eps if method == "fgsm" else (eps / 4 if eps > 0 else 0.0)
+    n = 1 if method == "fgsm" else steps
     x0 = x.detach()
     x_adv = x0.clone()
-    for _ in range(steps):
+    for _ in range(n):
         x_adv = x_adv.detach().requires_grad_(True)
-        loss = F.cross_entropy(logits(model, x_adv), y)
-        loss.backward()
-        x_adv = x_adv + alpha * x_adv.grad.sign()
-        x_adv = torch.max(torch.min(x_adv, x0 + eps), x0 - eps).clamp(0.0, 1.0)
+        F.cross_entropy(logits(model, x_adv), label).backward()
+        x_adv = x_adv.detach() + sign * alpha * x_adv.grad.sign()
+        x_adv = project_linf(x_adv, x0, eps)
     return x_adv.detach()
-
-
-def try_torchattacks(model, x, y, eps, attack_name):
-    try:
-        import torchattacks
-    except ImportError:
-        return None
-    atk = torchattacks.FGSM(model, eps=eps) if attack_name == "fgsm" else torchattacks.PGD(
-        model, eps=eps, alpha=max(eps / 4, 1 / 255), steps=10
-    )
-    atk.set_normalization_used(mean=list(CIFAR10_MEAN), std=list(CIFAR10_STD))
-    return atk(x, y)
 
 
 def load_cifar_resnet(device):
@@ -89,10 +74,33 @@ def load_cifar_resnet(device):
     return model, "cifar10_resnet56"
 
 
+def wilson(k, n, z=1.96):
+    if n <= 0:
+        return [0.0, 1.0]
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / d
+    return [max(0.0, c - h), min(1.0, c + h)]
+
+
+def git_short():
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=str(Path(__file__).resolve().parents[2]),
+            text=True,
+        ).strip()
+    except Exception:
+        return "unknown"
+
+
 def accuracy(model, loader, device, attack=None, eps=0.0):
     correct = 0
     total = 0
     flips = 0
+    clean_correct = 0
+    success_cc = 0
     linf = []
     rows = []
     for x, y in loader:
@@ -101,17 +109,15 @@ def accuracy(model, loader, device, attack=None, eps=0.0):
             clean_pred = logits(model, x).argmax(1)
         if attack is None:
             pred = clean_pred
-            x_use = x
         else:
-            # Local FGSM/PGD in [0, 1]. torchattacks is available but its
-            # normalisation path made Linf larger than the stated epsilon.
-            if attack == "fgsm":
-                x_use = fgsm(model, x, y, eps)
-            else:
-                x_use = pgd(model, x, y, eps)
+            x_use = run_local_attack(model, x, y, eps, method=attack, target=None)
+            x_use = project_linf(x_use, x, eps)
             with torch.no_grad():
                 pred = logits(model, x_use).argmax(1)
             linf.extend((x_use - x).abs().amax(dim=(1, 2, 3)).cpu().tolist())
+            cc = clean_pred == y
+            clean_correct += int(cc.sum().item())
+            success_cc += int(((pred != y) & cc).sum().item())
             flips += int((pred != clean_pred).sum().item())
         correct += int((pred == y).sum().item())
         total += int(y.numel())
@@ -123,11 +129,15 @@ def accuracy(model, loader, device, attack=None, eps=0.0):
                     "pred": int(pred[i]),
                 }
             )
+    n = total
     return {
-        "n": total,
-        "accuracy": correct / total if total else 0.0,
-        "attack_success_rate": flips / total if total and attack else 0.0,
+        "n": n,
+        "accuracy": correct / n if n else 0.0,
+        "n_clean_correct": clean_correct if attack else n,
+        "asr": success_cc / clean_correct if attack and clean_correct else 0.0,
+        "flip_rate": flips / n if attack and n else 0.0,
         "mean_linf": float(np.mean(linf)) if linf else 0.0,
+        "max_linf": float(np.max(linf)) if linf else 0.0,
         "rows": rows,
     }
 
@@ -150,12 +160,15 @@ def main():
     print(f"model={model_id} n={len(idx)} device={device}", flush=True)
     buckets = [2 / 255, 8 / 255, 16 / 255]
     summary = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
         "model": model_id,
         "dataset": "CIFAR-10 test subset",
         "n": int(min(args.n, len(test))),
         "seed": args.seed,
         "source": "computed",
+        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "torch_version": torch.__version__,
+        "git_commit": git_short(),
+        "asr_definition": "label flip among images the model classified correctly before the attack",
         "buckets": [],
     }
     print("measuring clean accuracy...", flush=True)
@@ -167,15 +180,26 @@ def main():
         fgsm_m = accuracy(model, loader, device, attack="fgsm", eps=eps)
         print(f"PGD eps={eps}...", flush=True)
         pgd_m = accuracy(model, loader, device, attack="pgd", eps=eps)
+        n = fgsm_m["n"]
+        assert fgsm_m["max_linf"] <= eps + 1e-6, f"FGSM L_inf {fgsm_m['max_linf']} exceeds {eps}"
+        assert pgd_m["max_linf"] <= eps + 1e-6, f"PGD L_inf {pgd_m['max_linf']} exceeds {eps}"
         summary["buckets"].append(
             {
                 "epsilon": eps,
                 "fgsm_robust_accuracy": fgsm_m["accuracy"],
-                "fgsm_asr": fgsm_m["attack_success_rate"],
+                "fgsm_robust_accuracy_ci95": wilson(round(fgsm_m["accuracy"] * n), n),
+                "fgsm_asr": fgsm_m["asr"],
+                "fgsm_flip_rate": fgsm_m["flip_rate"],
+                "fgsm_n_clean_correct": fgsm_m["n_clean_correct"],
                 "fgsm_mean_linf": fgsm_m["mean_linf"],
+                "fgsm_max_linf": fgsm_m["max_linf"],
                 "pgd_robust_accuracy": pgd_m["accuracy"],
-                "pgd_asr": pgd_m["attack_success_rate"],
+                "pgd_robust_accuracy_ci95": wilson(round(pgd_m["accuracy"] * n), n),
+                "pgd_asr": pgd_m["asr"],
+                "pgd_flip_rate": pgd_m["flip_rate"],
+                "pgd_n_clean_correct": pgd_m["n_clean_correct"],
                 "pgd_mean_linf": pgd_m["mean_linf"],
+                "pgd_max_linf": pgd_m["max_linf"],
             }
         )
         path = OUT / "adversarial_metrics.json"

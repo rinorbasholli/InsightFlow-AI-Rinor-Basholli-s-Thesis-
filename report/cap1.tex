@@ -57,7 +57,7 @@ I also contributed the following concrete pieces.
 \item Express routes that return \texttt{source} on every analysis. The adversarial route returns 503 if the Python service is down. It does not call Gemini.
 \item HTTP Basic Auth and a login cookie, a 32\,kB JSON body limit, a prompt-injection reject list, and an hourly rate limit (10 requests per IP for \texttt{/api/generate-phishing}, 40 for other \texttt{POST /api/} paths).
 \item Automated tests in \texttt{tests/labSecurity.test.ts} and \texttt{tests/apiContract.test.ts}.
-\item A phishing benchmark script that exported \texttt{eval/phishing/results/phishing\_metrics.json}. I report those numbers in Chapter~\ref{cha:eval}. The first F1 $= 1.0$ run was a construction error; the cited file is the later wording run (F1 $= 0.756$).
+\item A phishing benchmark script that exported \texttt{eval/phishing/results/phishing\_metrics.json}. I report those numbers in Chapter~\ref{cha:eval}. The first F1 $= 1.0$ run was a construction error. The cited file reports wording-only and with-sender side by side, plus a dummy baseline and 5-fold CV.
 \item An adversarial batch that exported \texttt{eval/adversarial/results/adversarial\_metrics.json} for $n=200$, seed 20260927, CIFAR-10 ResNet-56. Chapter~\ref{cha:eval} copies that file.
 \end{itemize}
 

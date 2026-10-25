@@ -8,7 +8,7 @@ I implemented InsightFlow AI as an educational laboratory for three AI cybersecu
 
 I can now answer the research questions in a limited way.
 
-RQ1. I generate and analyse teaching emails with Gemini or a fallback, and I keep dataset labels on the 90 seeded rows. The source field is the part that makes the answer usable in a viva. The reconstructed TF-IDF wording benchmark reached F1 $= 0.756$ on 57 test rows (187 total). I read that as a small teaching corpus, not as a mailbox detector.
+RQ1. I generate and analyse teaching emails with Gemini or a fallback, and I keep dataset labels on the 90 seeded rows. The source field is the part that makes the answer usable in a viva. The reconstructed TF-IDF benchmark shows that the sender line, not the wording, is what lifts F1 (0.706 wording-only versus 0.756 with sender on the 70/30 split; always-phish 0.733). I read that as a small teaching corpus, not as a mailbox detector.
 
 RQ2. I teach deepfake talking points with three filename presets and a narrated fallback. I do not inspect bytes. That is an honest teaching tab, not a forensics tool.
 
@@ -24,9 +24,7 @@ Gemini still writes teaching mail. I still have to defend every number myself. A
 If I continue the project after delivery, I would do the following.
 
 \begin{enumerate}
-\item Freeze a tag on the 200-image export and take new screenshots so Chapters~\ref{cha:eval}--\ref{cha:disc} match the live UI.
 \item Build a harder phishing corpus, or drop the TF-IDF score from the report and keep only a manual review of the teaching rows.
-\item Count \texttt{source=gemini} versus \texttt{source=fallback} on one recorded run per route, as A4 asked.
 \item Add a real frame-level detector only if I can run it on a public set such as FaceForensics++ and report that set's protocol~\cite{rossler2019faceforensics}.
 \item Add structured logs that store a timestamp and a hashed user name, not the email body, if an examiner needs repudiation.
 \item Write one or two browser tests for login, load-90, and the 503 path of the attack tab.

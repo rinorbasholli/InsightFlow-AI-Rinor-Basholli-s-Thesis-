@@ -9,7 +9,7 @@ API contracts, requirements, and tests for the teaching laboratory in this repos
 | FR-1 | Generate an educational phishing email from a scenario, prompt text, optional custom instructions, and complexity. | `POST /api/generate-phishing` |
 | FR-2 | Analyse pasted or generated email wording (subject, body, optional sender) and return scores plus `predictedCategory`. | `POST /api/analyze-email` |
 | FR-3 | Return a structured deepfake *scenario* analysis. Exact preset filenames return hardcoded JSON. Other names are narrated from text. Media bytes are not inspected. | `POST /api/analyze-media-deepfake` |
-| FR-4 | Run a real FGSM (default) or PGD attack on a pretrained CIFAR-10 ResNet via the Python eval service. Gemini is not used to invent confidences. | `POST /api/adversarial-perturb` → `EVAL_API/attack` |
+| FR-4 | Run a real FGSM or PGD attack on the shipped CIFAR-10 ResNet-56 via the Python eval service, with pixel-space \(L_\infty\) clip to \(\varepsilon\). Default is untargeted; `targeted: true` is explicit. Gemini is not used to invent confidences. | `POST /api/adversarial-perturb` → `EVAL_API/attack` |
 | FR-5 | Expose eval-service health and frozen metric files for the report. | `GET /api/eval/health`, `GET /api/eval/adversarial`, `GET /api/eval/phishing` |
 | FR-6 | Protect every API with HTTP Basic Auth **or** a login cookie when `LAB_BASIC_USER` and `LAB_BASIC_PASS` are set. The React login screen is the page lock; `/api/login` is the only unauthenticated POST. | `requireLabAccess` in `labSecurity.ts` |
 | FR-7 | Serve the React teaching UI (phishing, deepfake, adversarial, dashboard). | Vite middleware in development; `dist/` in production |
@@ -68,13 +68,13 @@ There is no application database. The dashboard keeps samples in React `useState
 **Adversarial (computed / down)**
 
 1. Client `POST /api/adversarial-perturb`.
-2. Express `fetch(EVAL_API + "/attack")` with the same JSON fields plus `method: "fgsm"`.
+2. Express `fetch(EVAL_API + "/attack")` with `method` (`fgsm` or `pgd`) and `targeted` (default false).
 3. Eval service loads CIFAR-10, runs FGSM/PGD, returns model softmax values (`source: computed`).
 4. If `fetch` fails: `503 { success: false, source: "unavailable" }`. Gemini is not a substitute.
 
 ## Data model (request / response shapes)
 
-No persistent schema. In-memory teaching types live in `src/types.ts` (`EmailCategory`, `PhishingEmail`, `AnalysisResult`). Live API payloads:
+No persistent schema. Live API payloads:
 
 - Email category enum: `legitimate` | `conventional_phishing` | `ai_phishing`.
 - Deepfake marker: `{ name, description, confidence, category }` where category is `physical` | `temporal` | `acoustic` | `digital`.
@@ -121,9 +121,9 @@ Otherwise Gemini or `{ success: true, source: "fallback", deepfakeAnalysis }`.
 
 ### `POST /api/adversarial-perturb`
 
-Body: `{ originalClass, targetClass, noiseLevel, architecture }`.
+Body: `{ originalClass, targetClass, noiseLevel, method, targeted }`. `method` is `fgsm` or `pgd`. `targeted` defaults to false.
 
-Proxied to `EVAL_API/attack` (default `http://127.0.0.1:8001`) with `method: "fgsm"` and optional `X-Eval-Token`.
+Proxied to `EVAL_API/attack` (default `http://127.0.0.1:8001`) with optional `X-Eval-Token`. The loaded checkpoint is always `cifar10_resnet56`.
 
 Success (eval service): `{ success: true, source: "computed", perturbation: { originalClass, originalConfidence, targetClass, targetConfidence, noiseStrength, mathematicalLogs, robustDefenseSteps, ... } }`.
 

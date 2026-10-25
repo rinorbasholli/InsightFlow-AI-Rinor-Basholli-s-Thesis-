@@ -64,7 +64,7 @@ NFR2 & Password comparison uses a length-safe \texttt{crypto.timingSafeEqual} wr
 NFR3 & The teaching dataset is templates plus a seed. It is not a mailbox harvest. \\
 NFR4 & The deepfake tab must say that bytes are not inspected. \\
 NFR5 & If Gemini is down, email generate/analyse and non-preset deepfake still return a deterministic fallback. Adversarial does not. \\
-NFR6 & Client state is \texttt{useState} only. There is no database. The footer states that the session is in memory. \\
+NFR6 & Client state is \texttt{useState} only. There is no database. \\
 NFR7 & The report language is English. The user interface is English. \\
 NFR8 & Automated tests cover auth helpers and the injection check. \\
 NFR9 & The laboratory is educational. It is not a production detector. \\
@@ -93,7 +93,7 @@ The examiner pastes subject and body, or loads a \texttt{.txt} / \texttt{.eml} f
 The examiner picks one of the three presets or types another filename. The server never opens the file. An exact preset name returns \texttt{source: "preset"}. Another name goes to Gemini or to \texttt{getDynamicFallbackDeepfake}. Marker confidences are simulated.
 
 \subsection{UC6 --- Run a real model attack}
-On the AI Model Attacks tab the examiner chooses a class pair and an $\varepsilon$ value and clicks simulate. Express posts to the Python service. A success answer has \texttt{source: "computed"} and softmax values from the CIFAR-10 ResNet-56. If the service is down, the UI shows an error. Gemini is not used.
+On the AI Model Attacks tab the examiner chooses a CIFAR-10 class pair, FGSM or PGD, and an $\varepsilon$ value and clicks simulate. Express posts to the Python service. The default attack is untargeted FGSM or PGD on CIFAR-10 ResNet-56, with $L_\infty$ clipped to $\varepsilon$. Targeted mode is only used when the request sets \texttt{targeted: true}. A success answer has \texttt{source: "computed"} and softmax values from that network. If the service is down, the UI shows an error. Gemini is not used. There is no ResNet-50 control.
 
 \subsection{UC7 --- Check the attack service}
 The front end or a script can call \texttt{GET /api/eval/health}. Express forwards to the Python \texttt{/health} route. This is how I know whether UC6 can succeed.

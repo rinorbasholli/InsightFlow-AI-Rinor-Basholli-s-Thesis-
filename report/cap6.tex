@@ -30,43 +30,52 @@ The dataset is in-memory templates. It is not a mailbox harvest.
 \section{Phishing benchmark}
 \label{sec:eval-phish}
 
-I wrote \texttt{eval/phishing/run\_benchmark.py}. The first corpus was 288 repeated templates and the classifier reached F1 $= 1.0$. That score was a construction error, not a result, so I rebuilt the set. Ham and phish now share the same stems and differ mainly in the last instruction. The sender domain is stored but held out of the TF-IDF text, so the model is a wording check like the teaching tab.
+I wrote \texttt{eval/phishing/run\_benchmark.py}. The first corpus was 288 repeated templates and the classifier reached F1 $= 1.0$. That score was a construction error, not a result, so I rebuilt the set. Ham and phish now share the same stems and differ mainly in the last instruction.
 
-The current file has 187 reconstructed rows, split 70/30 with \texttt{random\_state=20260927}. Table~\ref{tab:phish} copies the exported numbers. I do not treat them as Gmail or SpamAssassin performance.
+An earlier export concatenated \texttt{From:} plus the sender into every TF-IDF string while the JSON still said the sender was held out. That note was false. I now train \emph{both} feature sets on the same 187 rows and report the gap. Table~\ref{tab:phish} is the 70/30 split (\texttt{random\_state=20260927}) used for \texttt{predictions.csv}. Table~\ref{tab:phish-cv} is five-fold stratified cross-validation on the full set. A constant ``always phish'' dummy is the trivial baseline. I do not treat the numbers as Gmail or SpamAssassin performance.
+
+Bodies still contain URLs and lookalike hostnames, so \texttt{wording\_only} is not domain-free. It only drops the From line.
 
 \begin{table}[htbp]
 \centering
-\caption{Values copied from \texttt{eval/phishing/results/phishing\_metrics.json} (generated at 2026-10-20T18:10:55Z).}
+\caption{70/30 split copied from \texttt{eval/phishing/results/phishing\_metrics.json}. Confusion-matrix fields are \texttt{wording\_only}.}
 \label{tab:phish}
-\begin{tabular}{lr}
+\begin{tabular}{lrr}
 \toprule
-Field & Value \\
+Field & Wording only & With sender \\
 \midrule
-\texttt{n\_total} & 187 \\
-\texttt{n\_train} & 130 \\
-\texttt{n\_test} & 57 \\
-Model & TF-IDF (1--2 gram) + logistic regression \\
-\texttt{source} & computed \\
-Accuracy & 0.649 \\
-Precision & 0.633 \\
-Recall & 0.939 \\
-F1 & 0.756 \\
-AUC & 0.75 \\
-Test support (ham / phish) & 24 / 33 \\
+Accuracy & 0.561 & 0.649 \\
+F1 & 0.706 & 0.756 \\
+AUC & 0.513 & 0.75 \\
+Always-phish F1 (same split) & 0.733 & 0.733 \\
+Ham predicted ham / ham test & 2/24 & --- \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The JSON \texttt{label\_note} says the labels are the corpus labels shipped in \texttt{corpus.jsonl}, not a mailbox harvest and not Gemini-as-judge. Sender domain was held out. I agree with that note.
+\begin{table}[htbp]
+\centering
+\caption{Stratified 5-fold CV (mean $\pm$ std) from the same JSON. Dummy is \texttt{DummyClassifier(strategy=constant, constant=phish)}.}
+\label{tab:phish-cv}
+\begin{tabular}{lrrr}
+\toprule
+Model & Accuracy & F1 & AUC \\
+\midrule
+Wording only & $0.567\pm0.029$ & $0.708\pm0.020$ & $0.629\pm0.054$ \\
+With sender & $0.728\pm0.063$ & $0.806\pm0.040$ & $0.837\pm0.036$ \\
+Always phish & $0.583\pm0.010$ & $0.736\pm0.008$ & $0.500\pm0.000$ \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-Recall is high and ham recall is low (0.25 on 24 ham test rows). The wording model still over-flags lookalike institutional text. That is a limitation of a small reconstructed set, not a detector finding about the internet.
+On the 70/30 wording-only split the logistic model is \emph{not} better than predicting phish for every test row (F1 $0.706$ against $0.733$). Adding the sender raises F1 to $0.756$ on that split and to $0.806\pm0.040$ under CV. The gap is the From-line leak. Ham recall on wording-only is $2/24$. That is a limitation of a small reconstructed set, not a detector finding about the internet.
 
 I exported \texttt{MANUAL\_REVIEW.csv} and I ticked 20 rows. The teaching label matched the last instruction in each of those rows (\texttt{rinor\_agrees=yes}).
 
 \section{Adversarial method}
 \label{sec:eval-adv}
 
-I implemented the method my supervisor asked for: FGSM and PGD~\cite{goodfellow2015explaining,madry2018towards}, on at least 200 images, with clean accuracy, robust accuracy, attack success rate, and perturbation size. Torchattacks is used when the import works~\cite{kim2020torchattacks}.
+I implemented the method my supervisor asked for: FGSM and PGD~\cite{goodfellow2015explaining,madry2018towards}, on at least 200 images, with clean accuracy, robust accuracy, attack success rate, and perturbation size. I do \emph{not} cite torchattacks numbers~\cite{kim2020torchattacks}. The batch script and the live service use the same pixel-space clip in \texttt{run\_attacks.py} so measured $L_\infty$ stays $\le \varepsilon$.
 
 \texttt{eval/adversarial/run\_attacks.py} does the following.
 
@@ -75,30 +84,32 @@ I implemented the method my supervisor asked for: FGSM and PGD~\cite{goodfellow2
 \item Draw $n=200$ indices with \texttt{numpy} RandomState seed 20260927.
 \item Load \texttt{cifar10\_resnet56} from \texttt{chenyaofo/pytorch-cifar-models}~\cite{chenyaofo2021cifar}.
 \item Measure clean accuracy.
-\item For $\varepsilon \in \{2/255,\ 8/255,\ 16/255\}$, measure FGSM and PGD robust accuracy, attack success rate (label flip versus the clean prediction), and mean $L_\infty$.
+\item For $\varepsilon \in \{2/255,\ 8/255,\ 16/255\}$, measure FGSM and PGD robust accuracy, attack success rate (label flip among images the model classified correctly before the attack), and mean $L_\infty$.
 \item Write \texttt{eval/adversarial/results/adversarial\_metrics.json} with \texttt{source: "computed"}.
 \end{enumerate}
 
-The JSON now has \texttt{n=200}, clean accuracy $0.955$, seed 20260927, and \texttt{source: "computed"}. Table~\ref{tab:adv} copies the three $\varepsilon$ buckets. Mean $L_\infty$ sits on the requested budget in each row, which is what an $L_\infty$ clip should do.
+The JSON now has \texttt{n=200}, clean accuracy $0.955$ (191 of 200 already correct), seed 20260927, \texttt{source: "computed"}, torch $2.14.1$, and git commit \texttt{db25dc9}. Table~\ref{tab:adv} copies the three $\varepsilon$ buckets. ASR is a label flip among those 191 clean-correct images; \texttt{flip\_rate} is the old all-image figure. Each robust accuracy has a Wilson 95\% interval. $L_\infty$ never exceeds $\varepsilon$. The full stdout is \texttt{eval/adversarial/results/run200\_full.txt}.
 
 \begin{table}[htbp]
 \centering
-\caption{Values copied from \texttt{eval/adversarial/results/adversarial\_metrics.json} (generated at 2026-10-22T12:40:54Z). Clean accuracy $0.955$ on $n=200$.}
+\caption{Values copied from \texttt{eval/adversarial/results/adversarial\_metrics.json}. Clean accuracy $0.955$ on $n=200$. Untargeted FGSM/PGD. ASR among 191 clean-correct images.}
 \label{tab:adv}
 \begin{tabular}{lrrrr}
 \toprule
 $\varepsilon$ & FGSM robust & FGSM ASR & PGD robust & PGD ASR \\
 \midrule
-$2/255$ & 0.45 & 0.505 & 0.05 & 0.905 \\
-$8/255$ & 0.27 & 0.695 & 0.00 & 0.955 \\
-$16/255$ & 0.19 & 0.795 & 0.00 & 0.96 \\
+$2/255$ & 0.45 & 0.529 & 0.05 & 0.948 \\
+$8/255$ & 0.27 & 0.717 & 0.00 & 1.00 \\
+$16/255$ & 0.19 & 0.801 & 0.00 & 1.00 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-These numbers are for CIFAR-10 ResNet-56 on 200 test images, not for ImageNet ResNet-50. PGD at $8/255$ and $16/255$ left no correctly classified image in this subset. That is a strong attack on this model and this budget, not a claim about every classifier.
+These numbers are for CIFAR-10 ResNet-56 on 200 test images, not for ImageNet ResNet-50. PGD at $8/255$ and $16/255$ flipped every clean-correct image in this subset. That is a strong attack on this model and this budget, not a claim about every classifier.
 
-The live Simulate button is a single-image call to \texttt{POST /attack}. It returns one clean class, one adversarial class, and two softmax percentages. Those values are model outputs when the service is up. They are not the batch summary in Table~\ref{tab:adv}. I do not copy a live button result into this chapter.
+The live Simulate button is a single-image call to \texttt{POST /attack}. Default is untargeted. Targeted runs only when the request sets \texttt{targeted: true}. The service uses the same clip as the batch and refuses $L_\infty > \varepsilon$. Recorded calls are \texttt{eval/adversarial/results/live\_fgsm.json}, \texttt{live\_pgd.json}, and \texttt{live\_fgsm\_targeted.json}; each has \texttt{noiseStrength} $0.05$ at $\varepsilon=0.05$. I do not copy those one-image scores into Table~\ref{tab:adv}.
+
+The tab shows a fixed label: ResNet-56 (CIFAR-10, pretrained). Unknown class names return HTTP 400.
 
 \section{Unit tests}
 \label{sec:eval-tests}
@@ -108,4 +119,4 @@ I ran \texttt{npm test}. The files \texttt{tests/labSecurity.test.ts} and \textt
 \section{What I did not evaluate}
 \label{sec:eval-not}
 
-I did not run a user study. I did not measure Gmail catch rates. I did not score real videos. I did not compare ImageNet ResNet-50 with CIFAR ResNet-56 in a second metrics file. I did export one labelled session in \texttt{eval/gemini\_runs/SUMMARY.json} (three Gemini teaching routes, one computed attack). That file is a single session, not a production traffic count.
+I did not run a user study. I did not measure Gmail catch rates. I did not score real videos. I did not compare ImageNet ResNet-50 with CIFAR ResNet-56 in a second metrics file. I did export one labelled Gemini session in \texttt{eval/gemini\_runs/SUMMARY.json} (three teaching routes). Computed attacks are logged under \texttt{eval/adversarial/results/live\_*.json}. Those files are single sessions, not a production traffic count.

@@ -1,58 +1,58 @@
 id,label,pred,proba,subject
-conv-10,phish,phish,0.7017,Diploma collection
-ham-70,ham,phish,0.6222,Re: group work
-ai-3,phish,phish,0.6917,Password expire
-ham-45,ham,phish,0.5820,Supervisor signature needed
-ai-46,phish,phish,0.6605,Supervisor signature needed
-ai-63,phish,phish,0.6519,Urgent: slides
-ai-28,phish,phish,0.5504,Overdue book
-ai-35,phish,phish,0.6004,Urgent: campus password
-conv-29,phish,phish,0.7150,Residence inspection
-conv-22,phish,phish,0.6606,Course survey
-ham-66,ham,phish,0.6671,Group work
-ham-17,ham,phish,0.6317,Mobility grant reminder
-ai-54,phish,phish,0.5022,Tuition receipt
-ham-67,ham,ham,0.4337,Security alert
-ai-7,phish,phish,0.5248,Mailbox almost full
-ham-55,ham,phish,0.6192,Virtual is slow
-ai-57,phish,phish,0.5703,Password expire
-ham-61,ham,ham,0.4940,Weekend plans
-ham-6,ham,ham,0.4616,Timetable change week 42
-ham-9,ham,phish,0.5127,Library reservation confirmed
-ai-71,phish,phish,0.6611,Re: group work
-ham-25,ham,phish,0.5119,Exam room change
-ham-59,ham,phish,0.5207,Re: group work
-ai-15,phish,phish,0.7578,Supervisor signature needed
-ai-65,phish,ham,0.4555,Mailbox almost full
-ai-20,phish,phish,0.6178,Virtual maintenance
-ham-50,ham,phish,0.6362,Erasmus docs
-ai-36,phish,phish,0.5444,Horário semana 43
-ham-56,ham,phish,0.5720,Password expire
-ai-1,phish,phish,0.6037,Password expiry reminder
-ham-15,ham,phish,0.5437,Supervisor signature needed
-conv-30,phish,phish,0.6824,Assignment deadline
-ai-4,phish,phish,0.6008,Urgent timetable update
-ham-54,ham,phish,0.5207,Coffee and IBAN question
-ai-47,phish,ham,0.4891,Mailbox almost full
-ai-58,phish,phish,0.6030,Lab pairs
-ham-16,ham,ham,0.4085,Internship form
-ham-38,ham,phish,0.5537,Re: group work
-ham-11,ham,phish,0.5164,Tuition receipt
-ai-55,phish,phish,0.6605,Coffee and IBAN question
-conv-6,phish,phish,0.6243,Mailbox almost full
-ham-37,ham,phish,0.5687,Group work
-ham-34,ham,phish,0.6157,Learning agreement
-ai-2,phish,phish,0.5356,Password expiry reminder
-ham-33,ham,phish,0.5578,Student card reprint
-ham-62,ham,ham,0.4811,Urgent: slides
-conv-3,phish,phish,0.7297,Parcel waiting
-conv-20,phish,phish,0.7221,Exam room change
-ai-49,phish,phish,0.5580,Notes from week 42
-conv-18,phish,phish,0.7013,Mailbox quota
-ai-76,phish,phish,0.5288,Bolsa
-ham-77,ham,ham,0.4100,Mailbox quota
-ai-45,phish,phish,0.5102,Canteen after IA
-ham-13,ham,phish,0.5382,Scholarship shortlist
-ai-12,phish,phish,0.6752,Tuition payment due
-ai-34,phish,phish,0.5753,Library reservation confirmed
-conv-21,phish,phish,0.7028,Gym reservation confirmed
+conv-10,phish,phish,0.6771,Diploma collection
+ham-70,ham,phish,0.6000,Re: group work
+ai-3,phish,phish,0.6194,Password expire
+ham-45,ham,phish,0.5573,Supervisor signature needed
+ai-46,phish,phish,0.6533,Supervisor signature needed
+ai-63,phish,phish,0.6184,Urgent: slides
+ai-28,phish,phish,0.5611,Overdue book
+ai-35,phish,phish,0.5849,Urgent: campus password
+conv-29,phish,phish,0.6897,Residence inspection
+conv-22,phish,phish,0.6033,Course survey
+ham-66,ham,phish,0.6292,Group work
+ham-17,ham,phish,0.6333,Mobility grant reminder
+ai-54,phish,phish,0.5152,Tuition receipt
+ham-67,ham,phish,0.5510,Security alert
+ai-7,phish,phish,0.5106,Mailbox almost full
+ham-55,ham,phish,0.5710,Virtual is slow
+ai-57,phish,phish,0.5577,Password expire
+ham-61,ham,phish,0.5163,Weekend plans
+ham-6,ham,phish,0.5157,Timetable change week 42
+ham-9,ham,phish,0.5616,Library reservation confirmed
+ai-71,phish,phish,0.6360,Re: group work
+ham-25,ham,phish,0.5976,Exam room change
+ham-59,ham,phish,0.6507,Re: group work
+ai-15,phish,phish,0.7585,Supervisor signature needed
+ai-65,phish,ham,0.4387,Mailbox almost full
+ai-20,phish,phish,0.6398,Virtual maintenance
+ham-50,ham,phish,0.6128,Erasmus docs
+ai-36,phish,ham,0.4876,Horário semana 43
+ham-56,ham,phish,0.5374,Password expire
+ai-1,phish,phish,0.5753,Password expiry reminder
+ham-15,ham,phish,0.6205,Supervisor signature needed
+conv-30,phish,phish,0.6220,Assignment deadline
+ai-4,phish,phish,0.5479,Urgent timetable update
+ham-54,ham,phish,0.6269,Coffee and IBAN question
+ai-47,phish,ham,0.4980,Mailbox almost full
+ai-58,phish,phish,0.5514,Lab pairs
+ham-16,ham,ham,0.4886,Internship form
+ham-38,ham,phish,0.6433,Re: group work
+ham-11,ham,phish,0.5895,Tuition receipt
+ai-55,phish,phish,0.6538,Coffee and IBAN question
+conv-6,phish,phish,0.5288,Mailbox almost full
+ham-37,ham,phish,0.6691,Group work
+ham-34,ham,phish,0.6761,Learning agreement
+ai-2,phish,phish,0.5690,Password expiry reminder
+ham-33,ham,phish,0.6580,Student card reprint
+ham-62,ham,phish,0.5912,Urgent: slides
+conv-3,phish,phish,0.7111,Parcel waiting
+conv-20,phish,phish,0.7112,Exam room change
+ai-49,phish,phish,0.5403,Notes from week 42
+conv-18,phish,phish,0.6399,Mailbox quota
+ai-76,phish,phish,0.5120,Bolsa
+ham-77,ham,ham,0.4773,Mailbox quota
+ai-45,phish,phish,0.5142,Canteen after IA
+ham-13,ham,phish,0.6041,Scholarship shortlist
+ai-12,phish,phish,0.6856,Tuition payment due
+ai-34,phish,phish,0.5772,Library reservation confirmed
+conv-21,phish,phish,0.6875,Gym reservation confirmed

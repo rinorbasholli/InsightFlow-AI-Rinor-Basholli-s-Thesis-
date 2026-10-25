@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local inference API. Express calls this instead of asking Gemini for fake confidences."""
+"""Local inference API. Same pixel-space FGSM/PGD as run_attacks.py."""
 from __future__ import annotations
 
 import json
@@ -12,7 +12,7 @@ from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
 from torchvision import datasets, transforms
 
-from run_attacks import fgsm, load_cifar_resnet, logits, pgd, try_torchattacks
+from run_attacks import load_cifar_resnet, logits, run_local_attack
 
 CIFAR_CLASSES = [
     "airplane",
@@ -65,14 +65,15 @@ class AttackReq(BaseModel):
     noiseLevel: float = 0.05
     architecture: str = "ResNet-56"
     method: str = "fgsm"
+    targeted: bool = False
 
 
 def resolve_class(name: str) -> int:
     key = (name or "").strip().lower()
     mapped = ALIAS.get(key, key)
-    if mapped in CIFAR_CLASSES:
-        return CIFAR_CLASSES.index(mapped)
-    return 0
+    if mapped not in CIFAR_CLASSES:
+        raise HTTPException(status_code=400, detail=f"unknown class '{name}'")
+    return CIFAR_CLASSES.index(mapped)
 
 
 @app.get("/health")
@@ -112,35 +113,44 @@ if __name__ == "__main__":
 @app.post("/attack")
 def attack(req: AttackReq, x_eval_token: str | None = Header(default=None, alias="X-Eval-Token")):
     require_eval_token(x_eval_token)
+    eps = float(req.noiseLevel)
+    if not 0 < eps <= 0.25:
+        raise HTTPException(status_code=400, detail="noiseLevel must be in (0, 0.25]")
     m = model()
     y_idx = resolve_class(req.originalClass)
     found = None
+    image_index = 0
     for i in range(len(DATASET)):
-        x, y = DATASET[i]
-        if int(y) == y_idx:
-            found = x.unsqueeze(0)
-            break
+        x_i, y_i = DATASET[i]
+        if int(y_i) != y_idx:
+            continue
+        cand = x_i.unsqueeze(0).to(DEVICE)
+        with torch.no_grad():
+            if int(logits(m, cand).argmax(1).item()) == y_idx:
+                found = cand
+                image_index = i
+                break
     if found is None:
-        found = DATASET[0][0].unsqueeze(0)
-        y_idx = int(DATASET[0][1])
-    x = found.to(DEVICE)
+        raise HTTPException(status_code=400, detail=f"no clean-correct CIFAR-10 image for class {req.originalClass}")
+    x = found
     y = torch.tensor([y_idx], device=DEVICE)
+    method = "pgd" if (req.method or "").lower() == "pgd" else "fgsm"
+    t = torch.tensor([resolve_class(req.targetClass)], device=DEVICE) if req.targeted else None
     with torch.no_grad():
         clean_logits = logits(m, x)
         clean_prob = F.softmax(clean_logits, dim=1)[0]
         clean_pred = int(clean_prob.argmax())
         clean_conf = float(clean_prob[clean_pred] * 100)
-    eps = float(req.noiseLevel)
-    method = (req.method or "fgsm").lower()
-    x_adv = try_torchattacks(m, x, y, eps, method)
-    if x_adv is None:
-        x_adv = fgsm(m, x, y, eps) if method == "fgsm" else pgd(m, x, y, eps)
+    x_adv = run_local_attack(m, x, y, eps, method, t)
     with torch.no_grad():
         adv_logits = logits(m, x_adv)
         adv_prob = F.softmax(adv_logits, dim=1)[0]
         adv_pred = int(adv_prob.argmax())
         adv_conf = float(adv_prob[adv_pred] * 100)
         linf = float((x_adv - x).abs().amax().item())
+    assert linf <= eps + 1e-6, f"L_inf {linf} exceeds eps {eps}"
+    t_idx = int(t.item()) if t is not None else None
+    target_reached = (adv_pred == t_idx) if t_idx is not None else None
     return {
         "success": True,
         "source": "computed",
@@ -149,12 +159,20 @@ def attack(req: AttackReq, x_eval_token: str | None = Header(default=None, alias
             "originalConfidence": round(clean_conf, 2),
             "targetClass": CIFAR_CLASSES[adv_pred],
             "targetConfidence": round(adv_conf, 2),
+            "targetReached": target_reached,
             "noiseStrength": round(linf, 5),
+            "epsilon": eps,
+            "method": method,
+            "targeted": bool(req.targeted),
+            "cifarIndex": image_index,
+            "modelId": MODEL_ID or "cifar10_resnet56",
             "mathematicalLogs": (
-                f"Real {method.upper()} on {MODEL_ID}\n"
-                f"x_adv = clip(x + eps * sign(grad_x J), 0, 1), eps={eps}\n"
-                f"L_inf={linf:.5f}; clean={CIFAR_CLASSES[clean_pred]} {clean_conf:.1f}%; "
-                f"adv={CIFAR_CLASSES[adv_pred]} {adv_conf:.1f}%"
+                f"{'Targeted' if req.targeted else 'Untargeted'} {method.upper()} on "
+                f"{MODEL_ID or 'cifar10_resnet56'}\n"
+                f"eps={eps}, L_inf={linf:.5f}, cifar_index={image_index}; "
+                f"clean={CIFAR_CLASSES[clean_pred]} {clean_conf:.1f}%; "
+                f"adv={CIFAR_CLASSES[adv_pred]} {adv_conf:.1f}%; "
+                f"targetReached={target_reached}"
             ),
             "robustDefenseSteps": [
                 "Adversarial training with FGSM/PGD examples in the training loop.",
@@ -162,6 +180,7 @@ def attack(req: AttackReq, x_eval_token: str | None = Header(default=None, alias
                 "Do not trust a single softmax score as a security control.",
             ],
             "requestedArchitecture": req.architecture,
+            "loadedArchitecture": MODEL_ID or "cifar10_resnet56",
             "dataset": "CIFAR-10",
         },
     }

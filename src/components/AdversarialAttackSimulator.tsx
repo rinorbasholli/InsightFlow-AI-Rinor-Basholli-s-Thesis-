@@ -71,9 +71,10 @@ function NoiseCanvas({ noiseLevel }: { noiseLevel: number }) {
 }
 
 export default function AdversarialAttackSimulator() {
-  const [architecture, setArchitecture] = useState('ResNet-56');
+  const architecture = 'CIFAR-10 ResNet-56';
   const [originalClass, setOriginalClass] = useState('Airplane');
   const [targetClass, setTargetClass] = useState('Bird');
+  const [attackMethod, setAttackMethod] = useState<'fgsm' | 'pgd'>('fgsm');
   const [noiseLevel, setNoiseLevel] = useState<number>(0.05);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any | null>(null);
@@ -104,7 +105,9 @@ export default function AdversarialAttackSimulator() {
           originalClass,
           targetClass,
           noiseLevel,
-          architecture
+          architecture: 'cifar10_resnet56',
+          method: attackMethod,
+          targeted: false
         })
       });
       const data = await resp.json();
@@ -139,7 +142,7 @@ export default function AdversarialAttackSimulator() {
             </div>
             <div>
               <h2 className="text-xl font-bold font-display text-white">AI Model Attack Simulator</h2>
-              <p className="text-xs text-slate-400">FGSM/PGD on a pretrained CIFAR-10 ResNet-56. Confidences are model softmax (`source: computed`). Gemini is not used here.</p>
+              <p className="text-xs text-slate-400">Untargeted FGSM or PGD on CIFAR-10 ResNet-56 in pixel space. L∞ is clipped to ε. Confidences are model softmax (`source: computed`).</p>
             </div>
           </div>
           <span className="text-[10px] font-mono leading-none bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 font-bold px-2.5 py-1.5 rounded uppercase">
@@ -163,11 +166,32 @@ export default function AdversarialAttackSimulator() {
                 type="button"
                 className="p-2.5 rounded-lg border text-xs font-mono bg-indigo-600/10 border-indigo-500/30 text-indigo-400 font-bold"
               >
-                CIFAR-10 ResNet-56
+                ResNet-56 (CIFAR-10, pretrained)
               </button>
               <p className="text-[10px] text-slate-500 leading-relaxed">
-                The eval service always loads this network. Other architectures are not shipped in the student lab.
+                This is the only checkpoint in the lab. There is no ResNet-50 option; ImageNet ResNet-50 is a different input size and a 1000-class head.
               </p>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+              Attack method
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => { setAttackMethod('fgsm'); setResult(null); }}
+                className={`p-2.5 rounded-lg border text-xs font-mono ${attackMethod === 'fgsm' ? 'bg-indigo-600/10 border-indigo-500/30 text-indigo-400 font-bold' : 'border-slate-800 text-slate-400'}`}
+              >
+                FGSM
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAttackMethod('pgd'); setResult(null); }}
+                className={`p-2.5 rounded-lg border text-xs font-mono ${attackMethod === 'pgd' ? 'bg-indigo-600/10 border-indigo-500/30 text-indigo-400 font-bold' : 'border-slate-800 text-slate-400'}`}
+              >
+                PGD
+              </button>
             </div>
           </div>
 
@@ -191,7 +215,7 @@ export default function AdversarialAttackSimulator() {
 
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">
-                Target Label (What to trick it into)
+                Pair class (not used; attack is untargeted)
               </label>
               <input
                 type="text"
@@ -414,7 +438,7 @@ export default function AdversarialAttackSimulator() {
                   How the AI Model was Tricked:
                 </span>
                 <p className="text-slate-300 leading-snug">
-                  The canvas overlay is only a picture of noise. The percentages below come from the Python eval service (FGSM on CIFAR-10). If that service is down, Simulate returns 503 and no numbers are invented.
+                  The canvas overlay is only a picture of noise. The percentages below come from the Python eval service (untargeted FGSM or PGD on CIFAR-10). If that service is down, Simulate returns 503 and no numbers are invented.
                 </p>
               </div>
             </div>
@@ -432,8 +456,8 @@ export default function AdversarialAttackSimulator() {
                   ))
                 ) : (
                   <div>
-                    x_adv = x + &epsilon; &middot; sign( &nabla;_x J(&theta;, x, y_true) )<br />
-                    // Adjust parameters on the left and click Simulate to see the steps.
+                    x_adv = x + ε · sign( ∇_x J(θ, x, y) )  (untargeted FGSM)<br />
+                    PGD repeats that step and clips to ε. This button is one image; Chapter 6 is n=200.
                   </div>
                 )}
               </div>
@@ -474,17 +498,33 @@ export default function AdversarialAttackSimulator() {
 
                 <div className="bg-slate-900/60 p-3 rounded border border-slate-800/80">
                   <span className="text-[10px] text-slate-500 uppercase font-mono font-bold">
-                    Tricked Result
+                    Adversarial top-1
                   </span>
                   <p className="text-sm font-bold text-rose-400 mt-0.5">{result.targetClass}</p>
                   <div className="flex items-center gap-1.5 mt-1">
                     <span className="text-lg font-bold font-mono text-white">
                       {result.targetConfidence}%
                     </span>
-                    <span className="text-[10px] text-rose-450 font-bold font-sans">Simulated target confidence</span>
+                    {result.targeted ? (
+                      <span className="text-[10px] text-rose-450 font-bold font-sans">
+                        Requested {result.requestedTargetClass || targetClass}
+                        {(result.targetReached ?? result.targetHit) ? ' (target reached)' : ' (target not reached)'}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-500 font-bold font-sans">
+                        Untargeted (any wrong class counts)
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
+              <p className="text-[10px] text-slate-500 font-mono">
+                Loaded model: {result.loadedArchitecture || 'cifar10_resnet56'}.
+                Requested ε = {Number(result.epsilonBudget ?? noiseLevel).toFixed(5)};
+                measured L∞ = {Number(result.noiseStrength).toFixed(5)}.
+                {result.method ? ` Method: ${result.targeted ? 'targeted' : 'untargeted'} ${String(result.method).toUpperCase()}.` : ''}
+                These values are one CIFAR test image, not the 200-image batch table.
+              </p>
 
               {/* Defenses */}
               <div className="space-y-2 pt-3 border-t border-slate-800">

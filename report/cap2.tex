@@ -32,7 +32,7 @@ Torchattacks is a widely used PyTorch package that implements FGSM, PGD and othe
 
 I chose a CIFAR-10 pretrained ResNet-56 from \texttt{chenyaofo/pytorch-cifar-models}~\cite{chenyaofo2021cifar,krizhevsky2009cifar,he2016resnet}. I explain that choice in Section~\ref{sec:resnet-choice}. The short version is that CIFAR-10 images are $32 \times 32$. An ImageNet ResNet-50 expects a different input size and a 1000-class head. Clean accuracy on upscaled CIFAR images would not be a fair teaching number.
 
-My evaluation script prefers \texttt{torchattacks} when the package imports. If the import fails, the same file falls back to my own FGSM and PGD loops. The live Express route calls the Python service. Gemini is not in that path.
+I implemented FGSM and PGD in pixel space in \texttt{eval/adversarial/run\_attacks.py}. Torchattacks remains a dependency, but I do not use it for the numbers in Chapter~\ref{cha:eval}: its normalisation path exceeded the stated $\varepsilon$. The live Express route calls the same local loops. Gemini is not in that path.
 
 \section{Educational platforms}
 \label{sec:sota-edu}

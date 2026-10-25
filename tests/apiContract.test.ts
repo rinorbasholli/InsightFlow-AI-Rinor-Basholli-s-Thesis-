@@ -47,6 +47,38 @@ test('documented success source labels remain gemini|fallback|preset|computed', 
   }
 });
 
+test('phishing benchmark trains wording_only and with_sender plus a dummy baseline', () => {
+  const src = readFileSync(join(root, 'eval/phishing/run_benchmark.py'), 'utf8');
+  assert.match(src, /def make_texts\(/);
+  assert.match(src, /def holdout\(/);
+  assert.match(src, /DummyClassifier/);
+  assert.match(src, /StratifiedKFold/);
+  const metrics = JSON.parse(
+    readFileSync(join(root, 'eval/phishing/results/phishing_metrics.json'), 'utf8')
+  );
+  assert.match(String(metrics.label_note), /wording_only/);
+  assert.ok(metrics.holdout_70_30.wording_only);
+  assert.ok(metrics.holdout_70_30.with_sender);
+  assert.ok(metrics.holdout_70_30.baseline_all_phish);
+  assert.ok(metrics.cv_5fold.wording_only);
+});
+
+test('live attack uses pixel-space FGSM/PGD, not torchattacks', () => {
+  const serviceSrc = readFileSync(join(root, 'eval/adversarial/service.py'), 'utf8');
+  const attacksSrc = readFileSync(join(root, 'eval/adversarial/run_attacks.py'), 'utf8');
+  assert.equal(serviceSrc.includes('torchattacks'), false);
+  assert.equal(attacksSrc.includes('torchattacks'), false);
+  assert.match(serviceSrc, /run_local_attack/);
+  assert.match(serviceSrc, /L_inf \{linf\} exceeds eps/);
+  assert.match(serviceSrc, /targeted: bool = False/);
+  assert.match(serviceSrc, /targetReached/);
+  assert.match(attacksSrc, /def wilson\(/);
+  assert.match(attacksSrc, /flip_rate/);
+  const serverSrc = readFileSync(join(root, 'server.ts'), 'utf8');
+  assert.match(serverSrc, /Boolean\(targeted\)/);
+  assert.equal(serverSrc.includes('getAdversarialFallback'), false);
+});
+
 test('Express advertises login, the four POST teaching routes and the three eval GET routes', () => {
   const serverSrc = readFileSync(join(root, 'server.ts'), 'utf8');
   assert.match(serverSrc, /app\.post\('\/api\/login'/);

@@ -17,7 +17,7 @@ The Node process loads \texttt{.env} and then \texttt{.env.local}. The model id 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
 \end{minted}
 
-I used \texttt{gemini-3.5-flash} as the default because that is the id I configured for the teaching calls~\cite{geminiapi}. I can override it with \texttt{GEMINI\_MODEL} without editing \texttt{server.ts}. The process logs the id at startup. I still have to confirm, in the viva, which id the live key actually served on a given day. This report does not invent a fallback count. I did not export a saved \texttt{source=gemini} run log into a metrics file.
+I used \texttt{gemini-3.5-flash} as the default because that is the id I configured for the teaching calls~\cite{geminiapi}. I can override it with \texttt{GEMINI\_MODEL} without editing \texttt{server.ts}. The process logs the id at startup. I still have to confirm, in the viva, which id the live key actually served on a given day. One labelled Gemini session is stored under \texttt{eval/gemini\_runs/}: three teaching routes with \texttt{source=gemini}. Live FGSM/PGD calls are stored under \texttt{eval/adversarial/results/live\_*.json}. I do not invent extra fallback counts beyond those files.
 
 I chose the official \texttt{@google/genai} client and JSON response schemas so that the UI could read \texttt{subject}, \texttt{body} and the score fields without a second parser.
 
@@ -64,11 +64,11 @@ I implemented three presets only. I wrote the filenames so that they look like t
 \section{Adversarial path}
 \label{sec:impl-adv}
 
-\texttt{eval/adversarial/service.py} is a FastAPI application. On first attack it downloads CIFAR-10 and loads \texttt{cifar10\_resnet56} through \texttt{torch.hub}. It picks the first test image whose label matches the requested class, runs FGSM or PGD, and returns softmax percentages plus an $L_\infty$ value.
+\texttt{eval/adversarial/service.py} is a FastAPI application. On first attack it downloads CIFAR-10 and loads \texttt{cifar10\_resnet56} through \texttt{torch.hub}. It picks a seeded test image of the requested class that the model already classifies correctly, runs \emph{targeted} FGSM or PGD toward the requested target class in pixel space, projects onto the $L_\infty$ ball, and returns softmax percentages plus the measured $L_\infty$. Unknown class names return HTTP 400. The architecture field is ignored; the loaded checkpoint is always ResNet-56.
 
-\texttt{eval/adversarial/run\_attacks.py} is the batch script. It samples 200 test images by default, seed 20260927, and is supposed to write \texttt{adversarial\_metrics.json}. I describe the method in Chapter~\ref{cha:eval}. I do not paste invented accuracies.
+\texttt{eval/adversarial/run\_attacks.py} is the batch script. It samples 200 test images by default, seed 20260927, and writes \texttt{adversarial\_metrics.json} with \emph{untargeted} FGSM and PGD. I describe the method in Chapter~\ref{cha:eval}. I do not paste invented accuracies.
 
-The attack tab names the model CIFAR-10 ResNet-56. The service records the requested architecture string but always loads that checkpoint. I do not offer ImageNet class names (banana, panda) as presets. The class inputs are CIFAR-10 labels. The photographs next to the canvas are stock illustrations, not the $32 \times 32$ tensors used by the attack.
+The attack tab names the model CIFAR-10 ResNet-56 and offers FGSM or PGD. I do not offer ImageNet class names (banana, panda) as presets. The class inputs are CIFAR-10 labels. The photographs next to the canvas are stock illustrations, not the $32 \times 32$ tensors used by the attack.
 
 \section{Tests}
 \label{sec:tests}

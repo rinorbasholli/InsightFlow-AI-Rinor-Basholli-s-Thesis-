@@ -2,7 +2,15 @@
 
 English report for Rinor Basholli (69492), Informatics Engineering, ESTiG / Instituto Politécnico de Bragança.
 
-Language is set with `\reportlanguage{en}` in `main.tex`. Bibliography uses BibTeX `ieeetr` (`\bibliographystyle{ieeetr}\bibliography{refs}`), as required by this official `project-report` template.
+This folder **is** the official `project-report` template (the one from Virtual / the `project-report` zip Pedrosa opened). The hard-disk example chapters were replaced by the thesis chapters. Logos and `sty/project-report.sty` are the official files. Bibliography is BibTeX `ieeetr`.
+
+## Overleaf
+
+1. Overleaf → New project → Upload project.
+2. Upload `InsightFlow-report-overleaf.zip` (this `report/` folder).
+3. Set the main document to `main.tex`.
+4. Menu → Compiler: pdfLaTeX. Enable **shell escape** if minted fails (Overleaf: Menu → Compiler → TeX Live, or add a `latexmkrc` with `$pdflatex = 'pdflatex -shell-escape %O %S';`).
+5. Recompile. Do not paste the template’s sample `cap1` hard-disk text back in.
 
 ## Compile
 

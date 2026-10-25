@@ -1,42 +1,124 @@
 {
-  "generated_at": "2026-10-20T18:10:55.951297+00:00",
   "n_total": 187,
-  "n_train": 130,
-  "n_test": 57,
-  "model": "TfidfVectorizer(1-2gram) + LogisticRegression",
+  "n_ham": 78,
+  "n_phish": 109,
+  "seed": 20260927,
   "source": "computed",
-  "label_note": "Labels are the corpus labels shipped in corpus.jsonl, not a mailbox harvest and not Gemini-as-judge. Sender domain was held out so the model is a wording check. Twenty rows were spot-checked in MANUAL_REVIEW.csv.",
-  "note": "Corpus is reconstructed teaching data, not a mailbox harvest and not Gmail/SpamAssassin numbers. F1 is on this corpus only.",
-  "accuracy": 0.6491228070175439,
-  "precision": 0.6326530612244898,
-  "recall": 0.9393939393939394,
-  "f1": 0.7560975609756098,
-  "auc": 0.75,
-  "report": {
-    "ham": {
-      "precision": 0.75,
-      "recall": 0.25,
-      "f1-score": 0.375,
-      "support": 24.0
+  "model": "TfidfVectorizer(1-2gram, min_df=2) + LogisticRegression(max_iter=400)",
+  "label_note": "Labels are the corpus labels shipped in corpus.jsonl (author-written, reconstructed teaching data), not a mailbox harvest and not Gemini-as-judge. wording_only = subject + body (the body can still contain link domains). with_sender = subject + body + From address. baseline_all_phish = always predicts phish.",
+  "holdout_70_30": {
+    "wording_only": {
+      "n_train": 130,
+      "n_test": 57,
+      "accuracy": 0.5614035087719298,
+      "precision": 0.5769230769230769,
+      "recall": 0.9090909090909091,
+      "f1": 0.7058823529411765,
+      "auc": 0.5126262626262625,
+      "confusion": {
+        "tn": 2,
+        "fp": 22,
+        "fn": 3,
+        "tp": 30
+      }
     },
-    "phish": {
+    "with_sender": {
+      "n_train": 130,
+      "n_test": 57,
+      "accuracy": 0.6491228070175439,
       "precision": 0.6326530612244898,
       "recall": 0.9393939393939394,
-      "f1-score": 0.7560975609756098,
-      "support": 33.0
+      "f1": 0.7560975609756098,
+      "auc": 0.75,
+      "confusion": {
+        "tn": 6,
+        "fp": 18,
+        "fn": 2,
+        "tp": 31
+      }
     },
-    "accuracy": 0.6491228070175439,
-    "macro avg": {
-      "precision": 0.6913265306122449,
-      "recall": 0.5946969696969697,
-      "f1-score": 0.5655487804878049,
-      "support": 57.0
+    "baseline_all_phish": {
+      "n_train": 130,
+      "n_test": 57,
+      "accuracy": 0.5789473684210527,
+      "precision": 0.5789473684210527,
+      "recall": 1.0,
+      "f1": 0.7333333333333333,
+      "auc": 0.5,
+      "confusion": {
+        "tn": 0,
+        "fp": 24,
+        "fn": 0,
+        "tp": 33
+      }
+    }
+  },
+  "cv_5fold": {
+    "wording_only": {
+      "accuracy": {
+        "mean": 0.5669985775248934,
+        "std": 0.028624638734420265
+      },
+      "precision": {
+        "mean": 0.5839861751152073,
+        "std": 0.020815265725473438
+      },
+      "recall": {
+        "mean": 0.8995670995670995,
+        "std": 0.04401130745329463
+      },
+      "f1": {
+        "mean": 0.7075561019950294,
+        "std": 0.02007650477127692
+      },
+      "roc_auc": {
+        "mean": 0.6286958874458874,
+        "std": 0.05404051915287985
+      }
     },
-    "weighted avg": {
-      "precision": 0.682062298603652,
-      "recall": 0.6491228070175439,
-      "f1-score": 0.5956354300385109,
-      "support": 57.0
+    "with_sender": {
+      "accuracy": {
+        "mean": 0.7275960170697013,
+        "std": 0.062924227827934
+      },
+      "precision": {
+        "mean": 0.6945454545454546,
+        "std": 0.05568021844659692
+      },
+      "recall": {
+        "mean": 0.9636363636363636,
+        "std": 0.034015067152490384
+      },
+      "f1": {
+        "mean": 0.8058212898212899,
+        "std": 0.040263819321560826
+      },
+      "roc_auc": {
+        "mean": 0.8365800865800865,
+        "std": 0.03566885146226461
+      }
+    },
+    "baseline_all_phish": {
+      "accuracy": {
+        "mean": 0.5829302987197724,
+        "std": 0.010390886126742365
+      },
+      "precision": {
+        "mean": 0.5829302987197724,
+        "std": 0.010390886126742365
+      },
+      "recall": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "f1": {
+        "mean": 0.7364660042859926,
+        "std": 0.008300195037310278
+      },
+      "roc_auc": {
+        "mean": 0.5,
+        "std": 0.0
+      }
     }
   }
 }

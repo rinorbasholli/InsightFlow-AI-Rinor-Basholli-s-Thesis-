@@ -35,7 +35,7 @@ Outputs:
 \item \texttt{eval/phishing/results/MANUAL\_REVIEW.csv}
 \end{itemize}
 
-I already have one export of \texttt{phishing\_metrics.json}. Chapter~\ref{cha:eval} cites it. I still need to fill \texttt{rinor\_agrees} in the manual review file before the viva.
+I already have one export of \texttt{phishing\_metrics.json}. Chapter~\ref{cha:eval} cites it. Twenty rows in \texttt{MANUAL\_REVIEW.csv} are marked \texttt{rinor\_agrees=yes}.
 
 \section{Adversarial batch export}
 \label{sec:run-adv}
@@ -45,7 +45,7 @@ python3 -m pip install -r eval/requirements.txt
 python3 eval/adversarial/run_attacks.py
 \end{minted}
 
-The script should write \texttt{eval/adversarial/results/adversarial\_metrics.json}. When I wrote Chapter~\ref{cha:eval}, that file was missing. After a successful run the JSON must contain \texttt{clean\_accuracy}, per-bucket FGSM/PGD robust accuracy, ASR, and mean $L_\infty$, with \texttt{source: "computed"}.
+The script writes \texttt{eval/adversarial/results/adversarial\_metrics.json}. Chapter~\ref{cha:eval} copies that file. The JSON contains \texttt{clean\_accuracy}, per-bucket FGSM/PGD robust accuracy, ASR, and mean $L_\infty$, with \texttt{source: "computed"}. The batch is untargeted. The live service on port 8001 is targeted and uses the same pixel-space clip.
 
 \section{Live attack service}
 \label{sec:run-svc}

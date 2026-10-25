@@ -14,21 +14,23 @@ from __future__ import annotations
 
 import csv
 import json
-from datetime import datetime, timezone
 from pathlib import Path
 
+from sklearn.dummy import DummyClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score,
-    classification_report,
+    confusion_matrix,
     f1_score,
     precision_score,
     recall_score,
     roc_auc_score,
 )
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold, cross_validate, train_test_split
 from sklearn.pipeline import Pipeline
+
+SEED = 20260927
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "results"
@@ -1428,44 +1430,104 @@ def pick_review_rows(rows: list[dict], k: int = 20) -> list[dict]:
     return selected[:k]
 
 
-def main():
-    rows = build_corpus()
-    (HERE / "corpus.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")
-    texts = [f"{r['subject']}\n{r['body']}\nFrom:{r['sender']}" for r in rows]
-    y = [0 if r["label"] == "ham" else 1 for r in rows]
-    x_train, x_test, y_train, y_test, i_train, i_test = train_test_split(
-        texts, y, range(len(rows)), test_size=0.30, random_state=20260927, stratify=y
-    )
-    pipe = Pipeline(
+def make_texts(rows, with_sender):
+    if with_sender:
+        return [f"{r['subject']}\n{r['body']}\nFrom:{r['sender']}" for r in rows]
+    return [f"{r['subject']}\n{r['body']}" for r in rows]
+
+
+def make_lr():
+    return Pipeline(
         [
             ("tfidf", TfidfVectorizer(ngram_range=(1, 2), min_df=2)),
             ("lr", LogisticRegression(max_iter=400)),
         ]
     )
-    pipe.fit(x_train, y_train)
-    pred = pipe.predict(x_test)
-    proba = pipe.predict_proba(x_test)[:, 1]
+
+
+def make_baseline():
+    return DummyClassifier(strategy="constant", constant=1)
+
+
+def holdout(texts, y, model):
+    idx = list(range(len(texts)))
+    x_tr, x_te, y_tr, y_te, _i_tr, i_te = train_test_split(
+        texts, y, idx, test_size=0.30, random_state=SEED, stratify=y
+    )
+    model.fit(x_tr, y_tr)
+    pred = model.predict(x_te)
+    proba = model.predict_proba(x_te)[:, 1]
+    tn, fp, fn, tp = confusion_matrix(y_te, pred, labels=[0, 1]).ravel()
     metrics = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "n_train": len(x_tr),
+        "n_test": len(x_te),
+        "accuracy": float(accuracy_score(y_te, pred)),
+        "precision": float(precision_score(y_te, pred, zero_division=0)),
+        "recall": float(recall_score(y_te, pred)),
+        "f1": float(f1_score(y_te, pred)),
+        "auc": float(roc_auc_score(y_te, proba)),
+        "confusion": {"tn": int(tn), "fp": int(fp), "fn": int(fn), "tp": int(tp)},
+    }
+    return metrics, (i_te, y_te, pred, proba)
+
+
+def cross_val(texts, y, model):
+    res = cross_validate(
+        model,
+        texts,
+        y,
+        cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED),
+        scoring=["accuracy", "precision", "recall", "f1", "roc_auc"],
+    )
+    return {
+        k[len("test_") :]: {"mean": float(v.mean()), "std": float(v.std())}
+        for k, v in res.items()
+        if k.startswith("test_")
+    }
+
+
+def main():
+    rows = build_corpus()
+    (HERE / "corpus.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+    y = [0 if r["label"] == "ham" else 1 for r in rows]
+    wording = make_texts(rows, with_sender=False)
+    with_sender = make_texts(rows, with_sender=True)
+
+    wording_holdout, (i_te, y_te, pred, proba) = holdout(wording, y, make_lr())
+    sender_holdout, _ = holdout(with_sender, y, make_lr())
+    base_holdout, _ = holdout(wording, y, make_baseline())
+
+    metrics = {
         "n_total": len(rows),
-        "n_train": len(x_train),
-        "n_test": len(x_test),
-        "model": "TfidfVectorizer(1-2gram) + LogisticRegression",
+        "n_ham": y.count(0),
+        "n_phish": y.count(1),
+        "seed": SEED,
         "source": "computed",
-        "label_note": "Labels are the corpus labels shipped in corpus.jsonl, not a mailbox harvest and not Gemini-as-judge. Sender domain was held out so the model is a wording check. Twenty rows were spot-checked in MANUAL_REVIEW.csv.",
-        "note": "Corpus is reconstructed teaching data, not a mailbox harvest and not Gmail/SpamAssassin numbers. F1 is on this corpus only.",
-        "accuracy": float(accuracy_score(y_test, pred)),
-        "precision": float(precision_score(y_test, pred)),
-        "recall": float(recall_score(y_test, pred)),
-        "f1": float(f1_score(y_test, pred)),
-        "auc": float(roc_auc_score(y_test, proba)),
-        "report": classification_report(y_test, pred, target_names=["ham", "phish"], output_dict=True),
+        "model": "TfidfVectorizer(1-2gram, min_df=2) + LogisticRegression(max_iter=400)",
+        "label_note": (
+            "Labels are the corpus labels shipped in corpus.jsonl (author-written, reconstructed "
+            "teaching data), not a mailbox harvest and not Gemini-as-judge. "
+            "wording_only = subject + body (the body can still contain link domains). "
+            "with_sender = subject + body + From address. "
+            "baseline_all_phish = always predicts phish."
+        ),
+        "holdout_70_30": {
+            "wording_only": wording_holdout,
+            "with_sender": sender_holdout,
+            "baseline_all_phish": base_holdout,
+        },
+        "cv_5fold": {
+            "wording_only": cross_val(wording, y, make_lr()),
+            "with_sender": cross_val(with_sender, y, make_lr()),
+            "baseline_all_phish": cross_val(wording, y, make_baseline()),
+        },
     }
     (OUT / "phishing_metrics.json").write_text(json.dumps(metrics, indent=2))
+
     with (OUT / "predictions.csv").open("w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=["id", "label", "pred", "proba", "subject"])
         w.writeheader()
-        for idx, yt, yp, pr in zip(i_test, y_test, pred, proba):
+        for idx, yp, pr in zip(i_te, pred, proba):
             w.writerow(
                 {
                     "id": rows[idx]["id"],
@@ -1475,13 +1537,8 @@ def main():
                     "subject": rows[idx]["subject"],
                 }
             )
-    review = pick_review_rows(rows, 20)
-    with (OUT / "MANUAL_REVIEW.csv").open("w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["id", "subject", "label", "rinor_agrees"])
-        w.writeheader()
-        for r in review:
-            w.writerow({"id": r["id"], "subject": r["subject"], "label": r["label"], "rinor_agrees": ""})
-    print(json.dumps({k: metrics[k] for k in ("n_total", "accuracy", "precision", "recall", "f1", "auc")}, indent=2))
+    # MANUAL_REVIEW.csv is not rewritten.
+    print(json.dumps({k: metrics[k] for k in ("holdout_70_30", "cv_5fold")}, indent=2))
     print("wrote", OUT / "phishing_metrics.json")
 
 

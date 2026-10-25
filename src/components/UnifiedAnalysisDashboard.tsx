@@ -155,7 +155,7 @@ export default function UnifiedAnalysisDashboard({
         {/* Metric 1: Statistical Dataset Size */}
         <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800 space-y-2">
           <div className="flex justify-between items-center text-[10px] uppercase font-mono font-semibold text-slate-400">
-            <span>Total Emails in Database</span>
+            <span>Teaching emails in session</span>
             <span className="text-indigo-400 font-mono">In-memory set</span>
           </div>
           <div className="flex items-baseline gap-2">

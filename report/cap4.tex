@@ -39,6 +39,43 @@ I run the Node application locally with \texttt{npm run dev} at \texttt{http://l
 
 The dashboard reads \texttt{phishingHistory}. It does not call the Python service. The phishing lab calls \texttt{/api/generate-phishing} and \texttt{/api/analyze-email}. The deepfake lab calls \texttt{/api/analyze-media-deepfake}. The attack lab calls \texttt{/api/adversarial-perturb}.
 
+Figures~\ref{fig:ui-login}--\ref{fig:ui-adv} are captures of \texttt{http://localhost:3000} from this repository.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.92\textwidth]{images/ui-login}
+\caption{Login screen. The laboratory does not show the username or password on the page.}
+\label{fig:ui-login}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.92\textwidth]{images/ui-dashboard}
+\caption{Dashboard. The 75\% / 51\% style bands are configuration, not findings. Session state is in memory.}
+\label{fig:ui-dash}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.92\textwidth]{images/ui-phishing}
+\caption{AI Phishing Lab: authored exemplars and educational reconstructions.}
+\label{fig:ui-phish}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.92\textwidth]{images/ui-deepfake}
+\caption{Deepfake tab. Filename presets return hardcoded JSON. Bytes are not inspected.}
+\label{fig:ui-df}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.92\textwidth]{images/ui-adversarial}
+\caption{Attack tab. FGSM/PGD on CIFAR-10 ResNet-56. Confidences are \texttt{source: computed}.}
+\label{fig:ui-adv}
+\end{figure}
+
 \section{Sequence: generate phishing}
 \label{sec:seq-phish}
 
@@ -116,7 +153,7 @@ Figure~\ref{fig:seq-adv} is the only path that I treat as computed.
 \label{fig:seq-adv}
 \end{figure}
 
-\texttt{getAdversarialFallback} still exists in \texttt{server.ts}. I did not wire it to the POST handler. I left it unused on purpose so that a missing eval service cannot look like a successful attack.
+There is no Gemini or hardcoded confidence fallback on this route. A missing eval service returns 503.
 
 \section{Data model}
 \label{sec:data-model}
