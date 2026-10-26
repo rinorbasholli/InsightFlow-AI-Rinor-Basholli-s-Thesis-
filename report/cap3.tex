@@ -57,7 +57,7 @@ Table~\ref{tab:fr} lists the functional requirements, prioritised with the MoSCo
 \caption{Functional requirements.}
 \label{tab:fr}
 \scriptsize
-\begin{tabular}{P{0.7cm}P{6.4cm}P{1.0cm}P{0.7cm}P{2.7cm}}
+\begin{tabular}{P{0.7cm}P{5.5cm}P{1.2cm}P{0.9cm}P{3.2cm}}
 \toprule
 ID & Requirement & Priority & Source & Realised by \\
 \midrule
@@ -72,7 +72,7 @@ FR8 & Run FGSM or PGD on a pretrained CIFAR-10 classifier for a chosen class and
 FR9 & Label every successful analytical response with \texttt{source} $\in$ \{\texttt{gemini}, \texttt{fallback}, \texttt{preset}, \texttt{computed}\}. & Must & P & \texttt{server.ts}, \texttt{service.py} \\
 FR10 & Return a deterministic fallback when Gemini is unavailable on the email and deepfake routes; return HTTP~503 on the adversarial route when the attack service is unavailable. & Must & P & Route handlers \\
 FR11 & Expose the health of the attack service and the exported metric files. & Should & E & \path{/api/eval/*} \\
-FR12 & Present dashboard aggregates as configured teaching values, not as measurements. & Must & P & \path{UnifiedAnalysisDashboard.tsx} \\
+FR12 & Present dashboard aggregates as configured teaching values, not as measurements. & Must & P & \texttt{Unified\allowbreak Analysis\allowbreak Dashboard.tsx} \\
 FR13 & Provide scripts that regenerate the phishing benchmark and the adversarial batch results from code. & Must & E & \path{eval/} \\
 \bottomrule
 \end{tabular}

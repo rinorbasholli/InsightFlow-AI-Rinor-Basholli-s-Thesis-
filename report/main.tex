@@ -25,12 +25,15 @@
 \usepackage{csquotes} % recommended by biblatex with babel
 \usepackage[backend=biber,style=ieee]{biblatex}
 \addbibresource{refs.bib}
+\setcounter{biburlnumpenalty}{9000}
+\setcounter{biburllcpenalty}{7000}
+\setcounter{biburlucpenalty}{8000}
 \usepackage[pdftex,hidelinks]{hyperref}
 \hypersetup{pdftitle={Cybersecurity Risks of Artificial Intelligence: A Practical Study of Deepfakes, AI-Generated Phishing, and Adversarial Attacks}, pdfauthor={Rinor Basholli}}
 \setlength{\emergencystretch}{3em} % fewer overfull lines with long identifiers
 \newcommand{\todo}[1]{\textbf{[TO DO: #1]}}
-\usepackage[newfloat]{minted}
-\setminted{breaklines,fontsize=\scriptsize,frame=single}
+\usepackage{listings} % code listings without -shell-escape
+\lstset{basicstyle=\ttfamily\scriptsize,breaklines=true,frame=single,columns=fullflexible,keepspaces=true,showstringspaces=false}
 
 \begin{document}
 
@@ -50,20 +53,11 @@ AI-Generated Phishing, and Adversarial Attacks}
 
 \beforepreface
 
-\prefacesection*{Dedicatória/Dedication}
-Dedico este relatório à minha família e ao Instituto Politécnico de Bragança.
+\prefacesection*{Dedication}
+I dedicate this report to my family, and I thank them for their unwavering support and for the trust they placed in me to pursue my studies abroad at the Instituto Politécnico de Bragança. I also dedicate it to the Instituto Politécnico de Bragança, which welcomed me as a student.
 
-I dedicate this report to my family and to the Instituto Politécnico de Bragança.
-
-\prefacesection{Agradecimentos/Acknowledgments}
-Gostaria de agradecer ao Professor Tiago Pedrosa pela orientação, pelas correcções directas e por exigir números que eu consiga defender. Agradeço também à ESTiG e ao Instituto Politécnico de Bragança pelas condições de trabalho.
-
+\prefacesection{Acknowledgements}
 I would like to thank Professor Tiago Pedrosa for the supervision, for the direct corrections, and for asking for numbers that I can defend. I also thank ESTiG and the Instituto Politécnico de Bragança for the working conditions.
-
-\prefacesection{Resumo}
-A inteligência artificial generativa reduz o custo do phishing, dos deepfakes e dos ataques adversariais, mas os estudantes encontram normalmente estes riscos em ferramentas separadas, que raramente distinguem resultados medidos de texto gerado por um modelo. Este relatório apresenta o InsightFlow AI, um laboratório web que reúne phishing gerado por IA, cenários de deepfake e ataques adversariais num único fluxo autenticado, e que identifica a proveniência de cada resultado analítico (\texttt{gemini}, \texttt{fallback}, \texttt{preset} ou \texttt{computed}). O laboratório é composto por um cliente React, por um servidor Express que invoca a API Gemini e aplica autenticação, limites de pedidos, limites de tamanho e mitigações de injeção de prompts, e por um serviço Python que executa os ataques FGSM e PGD sobre uma ResNet-56 pré-treinada no CIFAR-10. Foram realizadas duas avaliações reprodutíveis. Num corpus construído de 187 emails institucionais, em que as mensagens legítimas e de phishing partilham a redação, um classificador TF-IDF com regressão logística baseado apenas no texto obteve um F1 de 0,708 em validação cruzada, abaixo de uma linha de base que classifica tudo como phishing (0,736). A inclusão do endereço do remetente elevou o F1 para 0,806, mas com domínios de remetente não vistos no treino o F1 desceu para 0,743, ao nível da linha de base, mantendo uma AUC de 0,784. Em 200 imagens de teste do CIFAR-10, a exatidão de 0,955 desceu para 0,05 com PGD a $\varepsilon = 2/255$ e para 0 a $8/255$, com todas as perturbações verificadas dentro do respetivo limite. Os 34 testes automáticos passam. Os resultados indicam que, neste corpus, a redação não distingue phishing de correio legítimo e que a vantagem do remetente depende sobretudo de domínios já conhecidos, e que classificadores sem defesas são frágeis; o efeito pedagógico do laboratório e a exatidão da análise de emails baseada em LLM ficam por avaliar.
-
-\textbf{Palavras-chave:} cibersegurança, inteligência artificial, phishing, deepfakes, exemplos adversariais, educação em segurança.
 
 \prefacesection{Abstract}
 Generative artificial intelligence lowers the cost of phishing, deepfakes and adversarial attacks, yet students usually meet these risks in separate tools that rarely distinguish measured results from model-generated text. This report presents InsightFlow AI, a web laboratory that places AI-generated phishing, deepfake scenarios and adversarial attacks in one authenticated workflow and labels every analytical output with its provenance (\texttt{gemini}, \texttt{fallback}, \texttt{preset} or \texttt{computed}). The laboratory consists of a React client, an Express server that calls the Gemini API and enforces authentication, rate limits, request-size limits and prompt-injection mitigations, and a Python service that runs FGSM and PGD attacks on a pretrained CIFAR-10 ResNet-56. Two reproducible evaluations were carried out. On a constructed corpus of 187 institutional emails in which legitimate and phishing messages share their wording, a TF-IDF and logistic-regression classifier using the wording alone reached a cross-validated F1 of 0.708, below an always-phishing baseline of 0.736. Adding the sender address raised F1 to 0.806, but when the sender domains were unseen in training, F1 fell to 0.743, level with the baseline, while AUC remained 0.784. On 200 CIFAR-10 test images, a clean accuracy of 0.955 fell to 0.05 under PGD at $\varepsilon = 2/255$ and to 0 at $8/255$, with every perturbation verified to lie within its budget. All 34 automated tests pass. The results indicate that, on this corpus, wording does not separate phishing from legitimate mail and the sender's advantage depends largely on known domains, and that undefended classifiers are fragile; the educational effect of the laboratory and the accuracy of its LLM-based email analysis remain to be evaluated.
@@ -73,7 +67,7 @@ Generative artificial intelligence lowers the cost of phishing, deepfakes and ad
 % Coloca índices / Put indices
 \afterpreface
 
-\prefacesection{Lista de Abreviaturas/Abbreviations}
+\prefacesection{Abbreviations}
 \begin{description}
  \item[AI] Artificial Intelligence
  \item[API] Application Programming Interface

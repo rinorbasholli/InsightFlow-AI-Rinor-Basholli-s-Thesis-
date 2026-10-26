@@ -11,7 +11,7 @@ The adversarial results were produced on a CPU with PyTorch~2.14.1, as recorded 
 \section{Running the laboratory}
 \label{sec:run-web}
 
-\begin{minted}{text}
+\begin{lstlisting}
 cp .env.example .env.local
 # set GEMINI_API_KEY, LAB_BASIC_USER and LAB_BASIC_PASS
 # optional: GEMINI_MODEL, EVAL_API_URL, EVAL_INTERNAL_TOKEN
@@ -19,27 +19,27 @@ npm install
 npm test
 python3 eval/adversarial/service.py &   # attack service on port 8001
 npm run dev                              # http://localhost:3000
-\end{minted}
+\end{lstlisting}
 
 For a production-style run, \texttt{npm run build} followed by \path{deploy/start-live-lab.sh} starts both processes and refuses to start without credentials. The container images are built from \texttt{Dockerfile} (web server only) and \path{deploy/Dockerfile.all-in-one} (web server and attack service).
 
 \section{Phishing benchmark}
 \label{sec:run-phish}
 
-\begin{minted}{text}
+\begin{lstlisting}
 python3 -m pip install -r eval/requirements.txt
 python3 eval/phishing/run_benchmark.py
-\end{minted}
+\end{lstlisting}
 
 The script regenerates \path{eval/phishing/corpus.jsonl} from code and writes \path{phishing_metrics.json} and \texttt{predictions.csv} under \path{eval/phishing/results/}. It does not overwrite \path{MANUAL_REVIEW.csv}. The result file contains the hold-out results, five-fold cross-validation on random folds and five-fold cross-validation grouped by sender domain, together with the Git commit and library versions.
 
 \section{Adversarial batch}
 \label{sec:run-adv}
 
-\begin{minted}{text}
+\begin{lstlisting}
 python3 eval/adversarial/run_attacks.py \
   2>&1 | tee eval/adversarial/results/run200_full.txt
-\end{minted}
+\end{lstlisting}
 
 The script writes \path{eval/adversarial/results/adversarial_metrics.json}, including the commit and PyTorch version, and stops with an error if any perturbation exceeds its budget. The log of the reported run is \path{run200_full.txt}.
 
@@ -48,7 +48,7 @@ The script writes \path{eval/adversarial/results/adversarial_metrics.json}, incl
 
 With the attack service running, the recorded live calls are reproduced with the following requests to the service API (targeted mode is available through the API only):
 
-\begin{minted}{text}
+\begin{lstlisting}
 curl -s -X POST localhost:8001/attack -H 'Content-Type: application/json' \
   -d '{"originalClass":"airplane","noiseLevel":0.05,"method":"fgsm"}'
 curl -s -X POST localhost:8001/attack -H 'Content-Type: application/json' \
@@ -56,4 +56,4 @@ curl -s -X POST localhost:8001/attack -H 'Content-Type: application/json' \
 curl -s -X POST localhost:8001/attack -H 'Content-Type: application/json' \
   -d '{"originalClass":"airplane","targetClass":"bird","targeted":true,
        "noiseLevel":0.05,"method":"fgsm"}'
-\end{minted}
+\end{lstlisting}

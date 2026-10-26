@@ -119,8 +119,7 @@ Shipping a detector was considered and rejected. Detectors trained on public ben
 \paragraph{Attack implementation.} FGSM and PGD share one function, \texttt{run\_local\_attack}, used by both the live service and the batch evaluation (Listing~\ref{lst:attack}). FGSM is a single step of size $\varepsilon$ (Equation~\ref{eq:fgsm}); PGD performs 10 steps of size $\alpha = \varepsilon/4$ from the clean image, without random initialisation. After every step the perturbed image is projected onto the $L_\infty$ ball of radius $\varepsilon$ around the original and clipped to $[0,1]$. A targeted variant descends the loss of a chosen target class instead of ascending the loss of the true class.
 
 % src: eval/adversarial/run_attacks.py:45-63
-\begin{listing}[htbp]
-\begin{minted}{python}
+\begin{lstlisting}[language=Python,float=htbp,caption={Shared FGSM/PGD implementation (\texttt{eval/adversarial/run\_attacks.py}, abridged).},label=lst:attack]
 def project_linf(x_adv, x0, eps):
     return torch.max(torch.min(x_adv, x0 + eps), x0 - eps).clamp(0.0, 1.0)
 
@@ -137,10 +136,7 @@ def run_local_attack(model, x, y, eps, method="fgsm", target=None, steps=10):
         x_adv = x_adv.detach() + sign * alpha * x_adv.grad.sign()
         x_adv = project_linf(x_adv, x0, eps)
     return x_adv.detach()
-\end{minted}
-\caption{Shared FGSM/PGD implementation (\texttt{eval/adversarial/run\_attacks.py}, abridged).}
-\label{lst:attack}
-\end{listing}
+\end{lstlisting}
 
 \paragraph{Live service.} % src: eval/adversarial/service.py:112-175
 For each request, the service validates $\varepsilon \in (0, 0.25]$ and the class name (HTTP~400 otherwise), selects the first test image of the requested class that the model classifies correctly, and runs the attack. It then measures $\|x_{\mathrm{adv}} - x\|_\infty$ and, if the value exceeds $\varepsilon$ by more than $10^{-6}$, returns HTTP~500 instead of a result (NFR6). The response contains the clean and adversarial top-1 classes with their softmax confidences, the requested budget, the measured perturbation, the attack method, and, for targeted runs, whether the target was reached. Figure~\ref{fig:ui-adv} shows a computed untargeted FGSM result; the noise image next to it is an illustration and is labelled as such.
@@ -156,7 +152,7 @@ For each request, the service validates $\varepsilon \in (0, 0.25]$ and the clas
 \label{sec:impl-eval}
 
 \paragraph{Phishing benchmark.} % src: eval/phishing/run_benchmark.py
-\path{run_benchmark.py} builds the corpus from code (\texttt{build\_corpus}), writes it to \texttt{corpus.jsonl}, and evaluates three models: a TF-IDF (unigram and bigram, minimum document frequency 2) and logistic-regression pipeline on subject and body only (\emph{wording only}); the same pipeline with the \texttt{From} address appended (\emph{with sender}); and a constant classifier that always predicts phishing (\emph{baseline}). Each model is evaluated on a stratified 70/30 hold-out split and with stratified five-fold cross-validation, both with seed 20260927. Because the corpus is generated from code, rerunning the script regenerates exactly the same data and metrics (NFR7).
+\path{run_benchmark.py} builds the corpus from code (\texttt{build\_corpus}), writes it to \texttt{corpus.jsonl}, and evaluates three models: a TF-IDF (unigram and bigram, minimum document frequency 2) and logistic-regression pipeline on subject and body only (\emph{wording only}); the same pipeline with the \texttt{From} address appended (\emph{with sender}); and a constant classifier that always predicts phishing (\emph{baseline}). Each model is evaluated on a stratified 70/30 hold-out split, with stratified five-fold cross-validation, and with stratified five-fold cross-validation grouped by sender domain, so that no domain appears in both the training and the test folds; all splits use seed 20260927. Because the corpus is generated from code, rerunning the script regenerates exactly the same data and metrics (NFR7).
 
 \paragraph{Adversarial batch.} % src: eval/adversarial/run_attacks.py:134-210
 \path{run_attacks.py} draws 200 images from the CIFAR-10 test set without replacement, using seed 20260927, measures clean accuracy, and runs FGSM and PGD at $\varepsilon \in \{2/255, 8/255, 16/255\}$. For each budget it records robust accuracy with a Wilson 95\% confidence interval, attack success rate, flip rate, and mean and maximum $L_\infty$. The script stops with an error if any perturbation exceeds its budget, and it writes the generation time, the PyTorch version and the Git commit into the result file.

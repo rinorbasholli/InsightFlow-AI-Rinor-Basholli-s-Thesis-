@@ -113,7 +113,7 @@ File & Main fields \\
 \path{eval/phishing/corpus.jsonl} & One email per line: \texttt{id}, \texttt{sender}, \texttt{subject}, \texttt{body}, \texttt{label} (ham/phish), \texttt{source} (pattern family) \\
 \path{eval/phishing/results/phishing_metrics.json} & Counts, seed, model description; hold-out and 5-fold metrics for three models; confusion matrices \\
 \path{eval/phishing/results/predictions.csv} & Hold-out predictions of the wording-only model: \texttt{id}, label, prediction, probability \\
-\path{eval/phishing/results/MANUAL_REVIEW.csv} & Twenty rows I marked as agreeing with the label \\
+\path{eval/phishing/results/MANUAL_REVIEW.csv} & Twenty rows whose labels were re-checked manually \\
 \path{eval/adversarial/results/adversarial_metrics.json} & Model, $n$, seed, timestamp, commit, clean accuracy; per $\varepsilon$: robust accuracy with 95\% interval, attack success rate, flip rate, mean and maximum $L_\infty$ \\
 \path{eval/adversarial/results/live_*.json} & Recorded single-image responses of the attack service \\
 \path{eval/gemini_runs/*.json} & Recorded Gemini responses of the three language routes \\
