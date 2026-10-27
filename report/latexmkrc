@@ -1,3 +1,0 @@
-# Free-plan compile limit: at most one LaTeX run per compile.
-# Press Recompile 2-3 times after large changes until references resolve.
-$max_repeat = 1;
