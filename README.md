@@ -32,34 +32,52 @@ Teaching demonstrator, not a production detector.
 
 ## Evaluations
 
+Python 3.10+ and `eval/requirements.txt` (includes PyTorch). First adversarial run downloads CIFAR-10.
+
 ```sh
+python3 -m pip install -r eval/requirements.txt
 python3 eval/phishing/run_benchmark.py
 python3 eval/adversarial/run_attacks.py
-python3 eval/adversarial/service.py
-npm run dev
 ```
 
 Phishing metrics: `eval/phishing/results/phishing_metrics.json`.
 
 ## Run
 
+Needs **Node 22** (`npm install`) and, for Simulate, **Python 3.10+**.
+
 ```sh
 cp .env.example .env.local
+```
+
+Edit `.env.local` before starting:
+
+- Set `LAB_BASIC_USER` and `LAB_BASIC_PASS` to values you choose. The login page uses **those same two values**. They are not stored in git; if someone else is reproducing the demo, send the pair out of band.
+- `GEMINI_API_KEY` is optional. Without it, teaching email routes still run (`source: fallback`).
+- If you set `EVAL_INTERNAL_TOKEN`, use the same token in `.env.local` for Express and for the Python process.
+
+```sh
 npm install
-python3 eval/adversarial/service.py &   # needed for Simulate
+python3 -m pip install -r eval/requirements.txt
+python3 eval/adversarial/service.py &   # needed for Simulate; first start downloads CIFAR-10
 npm run dev
 ```
 
-Open `http://localhost:3000` and sign in.
+Open `http://localhost:3000` and sign in with `LAB_BASIC_USER` / `LAB_BASIC_PASS` from `.env.local`.
+
+The intended examiner demo is this local pair of processes, not Docker. `./deploy/start-live-lab.sh` is the same idea after `npm run build` (Express in production mode plus the Python sidecar).
 
 ```sh
 docker build -t insightflow-lab .
 docker run -p 8080:8080 --env-file .env.local -e NODE_ENV=production insightflow-lab
 ```
 
+That image is the **Node app only**. Simulate still needs `python3 eval/adversarial/service.py` on the machine, and `EVAL_API_URL` inside the container must reach that service (container `127.0.0.1` is not the host). Without the sidecar, the UI runs and Simulate returns 503.
+
 ## Simulate (adversarial tab)
 
 ```sh
+python3 -m pip install -r eval/requirements.txt
 python3 eval/adversarial/service.py
 ```
 
