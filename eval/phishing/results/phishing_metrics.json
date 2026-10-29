@@ -124,8 +124,8 @@
     }
   },
   "provenance": {
-    "git_commit": "unknown",
-    "python_version": "3.13.17",
+    "git_commit": "5801e4c",
+    "python_version": "3.14.7",
     "sklearn_version": "1.9.1"
   },
   "cv_5fold": {
