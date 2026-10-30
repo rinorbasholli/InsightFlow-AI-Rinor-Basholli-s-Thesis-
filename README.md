@@ -1,10 +1,10 @@
 # InsightFlow AI
 
-**Thesis:** Cybersecurity Risks of Artificial Intelligence: A Practical Study of Deepfakes, AI-Generated Phishing, and Adversarial Attacks
+**Report:** Cybersecurity Risks of Artificial Intelligence: A Practical Study of Deepfakes, AI-Generated Phishing, and Adversarial Attacks
 
 **AI Cybersecurity Risk Lab**, Instituto Politécnico de Bragança (ESTiG), Informatics Engineering.
 
-The submitted written report is the Overleaf PDF. This repository is the laboratory, not the official thesis text.
+The submitted written report is the Overleaf PDF. This repository is the laboratory, not the official report text.
 
 - **Student:** Rinor Basholli (69492)
 - **Demonstration:** `npm run dev` then `http://localhost:3000`

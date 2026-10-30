@@ -8,17 +8,9 @@ from __future__ import annotations
 
 import argparse
 import json
-import ssl
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
-
-try:
-    import certifi
-
-    ssl._create_default_https_context = lambda: ssl.create_default_context(cafile=certifi.where())
-except Exception:
-    ssl._create_default_https_context = ssl._create_unverified_context
 
 import numpy as np
 import torch
