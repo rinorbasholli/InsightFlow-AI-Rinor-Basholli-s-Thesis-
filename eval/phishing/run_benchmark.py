@@ -7,7 +7,7 @@ Metrics: accuracy, precision, recall, F1, AUC on ham vs phish.
 
 I specified the design of this 187-email teaching list (institutional patterns,
 shared subjects, mixed PT/EN, overlapping ham and phishing). I wrote some samples
-and reconstructed others from public scam and notice patterns. Cursor drafted the
+and reconstructed others from public scam and notice patterns. Claude drafted the
 rest of the wording from that design. I checked the list, set the labels, and
 accepted it. It is not a mailbox harvest and not Gemini output from the lab.
 """
@@ -46,13 +46,13 @@ SRC_PHISH_LOOKALIKE = "reconstructed lookalike / spear-phish pattern"
 
 
 def build_corpus() -> list[dict]:
-    """187 unique emails: design and some texts mine; remaining wording drafted with Cursor.
+    """187 unique emails: design and some texts mine; remaining wording drafted with Claude.
 
     Overlap is deliberate: urgent ham on official domains, calm phish on ipb/estig/virtual
     lookalikes, shared subjects, typos, and mixed PT/EN student mail.
     """
     # Design and labels are mine. Some bodies I wrote or reconstructed from public
-    # patterns; the rest of the wording was drafted with Cursor from that design.
+    # patterns; the rest of the wording was drafted with Claude from that design.
     raw: list[tuple[str, str, str, str, str]] = [
         # --- Urgent official ham (password / timetable / mailbox) ---
         (
