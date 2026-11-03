@@ -8,9 +8,12 @@ coverage/
 !.env.example
 eval/adversarial/results/cifar10/
 
+.venv/
 __pycache__/
 *.pyc
 .githooks/
 .run/
 thesis/
 *.docx
+Evidence of Git Trails and Work/
+Examiner-ready git history evidence/
